@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chetango.Api", "Chetango.Api\Chetango.Api.csproj", "{28158083-6456-57AB-71D4-B3CF790F6D7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chetango.Application", "Chetango.Application\Chetango.Application.csproj", "{8651DBBB-47FA-E5D3-23AE-B97F054E417F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chetango.Domain", "Chetango.Domain\Chetango.Domain.csproj", "{98F12677-E9AA-7B0A-C48A-8C943301390E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chetango.Infrastructure", "Chetango.Infrastructure\Chetango.Infrastructure.csproj", "{DA887084-6E27-1EFC-FBB0-B3EE5E24A2D6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{28158083-6456-57AB-71D4-B3CF790F6D7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28158083-6456-57AB-71D4-B3CF790F6D7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28158083-6456-57AB-71D4-B3CF790F6D7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28158083-6456-57AB-71D4-B3CF790F6D7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8651DBBB-47FA-E5D3-23AE-B97F054E417F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8651DBBB-47FA-E5D3-23AE-B97F054E417F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8651DBBB-47FA-E5D3-23AE-B97F054E417F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8651DBBB-47FA-E5D3-23AE-B97F054E417F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98F12677-E9AA-7B0A-C48A-8C943301390E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98F12677-E9AA-7B0A-C48A-8C943301390E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98F12677-E9AA-7B0A-C48A-8C943301390E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98F12677-E9AA-7B0A-C48A-8C943301390E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA887084-6E27-1EFC-FBB0-B3EE5E24A2D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA887084-6E27-1EFC-FBB0-B3EE5E24A2D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA887084-6E27-1EFC-FBB0-B3EE5E24A2D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA887084-6E27-1EFC-FBB0-B3EE5E24A2D6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {615C01BB-C7C6-4EE4-A0FA-CAB3336E4BA3}
+	EndGlobalSection
+EndGlobal
