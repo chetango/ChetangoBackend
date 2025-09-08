@@ -13,7 +13,9 @@ namespace Chetango.Domain.Entities
         public Guid IdPaqueteUsado { get; set; }
         public Paquete PaqueteUsado { get; set; } = null!;
 
-        public EstadoAsistencia Estado { get; set; }
+        public int IdEstado { get; set; }
+        public EstadoAsistencia Estado { get; set; } = null!;
+
         public string? Observacion { get; set; }
     }
 }

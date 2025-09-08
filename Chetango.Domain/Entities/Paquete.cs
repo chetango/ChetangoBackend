@@ -11,7 +11,10 @@ namespace Chetango.Domain.Entities
         public int ClasesUsadas { get; set; }
         public DateTime FechaActivacion { get; set; }
         public DateTime FechaVencimiento { get; set; }
-        public EstadoPaquete Estado { get; set; }
+
+        public int IdEstado { get; set; }
+        public EstadoPaquete Estado { get; set; } = null!;
+
         public TipoPaquete TipoPaquete { get; set; }
         public decimal ValorPaquete { get; set; }
 
@@ -19,3 +22,4 @@ namespace Chetango.Domain.Entities
         public ICollection<CongelacionPaquete> Congelaciones { get; set; } = new List<CongelacionPaquete>();
     }
 }
+

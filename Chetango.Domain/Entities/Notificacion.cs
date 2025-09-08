@@ -7,9 +7,12 @@ namespace Chetango.Domain.Entities
         public Guid IdUsuario { get; set; }
         public Usuario Usuario { get; set; } = null!;
 
-        public TipoNotificacion Tipo { get; set; }
+        public int IdEstado { get; set; }
+        public EstadoNotificacion Estado { get; set; } = null!;
+
         public string Mensaje { get; set; } = null!;
-        public bool Leida { get; set; }
         public DateTime FechaEnvio { get; set; }
+        public bool Leida { get; set; }
     }
 }
+
