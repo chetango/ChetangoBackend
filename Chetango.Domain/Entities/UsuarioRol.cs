@@ -1,3 +1,4 @@
+using Chetango.Domain.Entities.Estados;
 namespace Chetango.Domain.Entities
 {
     public class UsuarioRol

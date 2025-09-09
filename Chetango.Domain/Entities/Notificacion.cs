@@ -1,4 +1,4 @@
-namespace Chetango.Domain.Entities
+namespace Chetango.Domain.Entities.Estados
 {
     public class Notificacion
     {
