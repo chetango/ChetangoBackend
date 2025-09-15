@@ -30,23 +30,19 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<EstadoUsuario> EstadosUsuario => Set<EstadoUsuario>();
         public DbSet<EstadoPaquete> EstadosPaquete => Set<EstadoPaquete>();
         public DbSet<EstadoNotificacion> EstadosNotificacion => Set<EstadoNotificacion>();
+        public DbSet<TipoDocumento> TiposDocumento => Set<TipoDocumento>();
+        public DbSet<TipoClase> TiposClase => Set<TipoClase>();
+        public DbSet<TipoPaquete> TiposPaquete => Set<TipoPaquete>();
+        public DbSet<TipoProfesor> TiposProfesor => Set<TipoProfesor>();
+        public DbSet<Rol> Roles => Set<Rol>();
+        public DbSet<RolEnClase> RolesEnClase => Set<RolEnClase>();
+        public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            // Aquí puedes agregar configuraciones adicionales si lo deseas
-            modelBuilder.Entity<UsuarioRol>().HasKey(ur => new { ur.IdUsuario, ur.Rol });
-
-            modelBuilder.Entity<Alumno>()
-                .HasOne(a => a.Usuario)
-                .WithMany(u => u.Alumnos)
-                .HasForeignKey(a => a.IdUsuario);
-
-            modelBuilder.Entity<Profesor>()
-                .HasOne(p => p.Usuario)
-                .WithMany(u => u.Profesores)
-                .HasForeignKey(p => p.IdUsuario);
+            // Aplica automáticamente todas las configuraciones IEntityTypeConfiguration de este ensamblado
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChetangoDbContext).Assembly);
         }
     }
 }

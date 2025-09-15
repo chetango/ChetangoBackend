@@ -10,7 +10,8 @@ namespace Chetango.Domain.Entities
 
         public DateTime FechaPago { get; set; }
         public decimal MontoTotal { get; set; }
-        public MetodoPago MetodoPago { get; set; }
+        public Guid IdMetodoPago { get; set; }
+        public MetodoPago MetodoPago { get; set; } = null!;
         public string? Nota { get; set; }
 
         // Relaciones

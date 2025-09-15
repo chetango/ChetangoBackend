@@ -5,6 +5,7 @@ namespace Chetango.Domain.Entities
     {
         public Guid IdUsuario { get; set; }
         public Usuario Usuario { get; set; } = null!;
-        public Rol Rol { get; set; }
+        public Guid IdRol { get; set; } // Nueva FK explícita
+        public Rol Rol { get; set; } = null!;
     }
 }

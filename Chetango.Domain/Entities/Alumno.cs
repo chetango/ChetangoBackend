@@ -8,7 +8,7 @@ namespace Chetango.Domain.Entities
         public Usuario Usuario { get; set; } = null!;
 
         // Relaciones
-        public ICollection<Paquete> Paquetes { get; set; } = new List<Paquete>();
+        // Paquetes ahora navegan desde Paquete -> Alumno
         public ICollection<Pago> Pagos { get; set; } = new List<Pago>();
         public ICollection<Asistencia> Asistencias { get; set; } = new List<Asistencia>();
     }

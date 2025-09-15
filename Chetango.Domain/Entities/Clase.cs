@@ -5,7 +5,8 @@ namespace Chetango.Domain.Entities
     {
         public Guid IdClase { get; set; }
         public DateTime Fecha { get; set; }
-        public TipoClase TipoClase { get; set; }
+        public Guid IdTipoClase { get; set; }
+        public TipoClase TipoClase { get; set; } = null!;
         public TimeSpan HoraInicio { get; set; }
         public TimeSpan HoraFin { get; set; }
 

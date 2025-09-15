@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Chetango.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+635ce08117bbf3b834e960a0c820903b205866d4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+042781e16f9a460ea1d7069a6b280df44fef97c5")]
 [assembly: System.Reflection.AssemblyProductAttribute("Chetango.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Chetango.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

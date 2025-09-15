@@ -9,7 +9,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
+    <!-- Added Design package for migrations (design-time services) -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.0.2" />
+    <PackageReference Include="Microsoft.Identity.Web.MicrosoftGraph" Version="3.0.2" />
   </ItemGroup>
 
   <ItemGroup>

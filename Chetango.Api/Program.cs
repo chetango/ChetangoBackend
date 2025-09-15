@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Chetango.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Identity.Web;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +14,25 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ChetangoDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ChetangoConnection")));
 
+// Azure Entra ID (Azure AD) JWT authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(options =>
+    {
+        builder.Configuration.Bind("AzureAd", options);
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                // Placeholder para lógica de aprovisionamiento de usuario interno (claim oid)
+                var oid = ctx.Principal?.FindFirst("oid")?.Value ?? ctx.Principal?.FindFirst("sub")?.Value;
+                // TODO: consultar DbContext y crear registro Usuario si no existe.
+                await Task.CompletedTask;
+            }
+        };
+    }, options => { builder.Configuration.Bind("AzureAd", options); });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -21,6 +43,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // 👉 Endpoint de prueba generado por plantilla
 var summaries = new[]
@@ -41,6 +65,13 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+// Endpoint de prueba protegido
+app.MapGet("/auth/ping", (ClaimsPrincipal user) =>
+{
+    var oid = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    return Results.Ok(new { message = "pong", oid });
+}).RequireAuthorization();
 
 app.Run();
 
