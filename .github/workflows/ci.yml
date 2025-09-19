@@ -1,0 +1,68 @@
+name: CI
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore ChetangoBackend.sln
+
+      - name: Build (Release)
+        run: dotnet build ChetangoBackend.sln -c Release --no-restore
+
+      - name: Test (si hay proyectos de pruebas)
+        shell: bash
+        run: |
+          set -e
+          TESTS=$(git ls-files "*Tests.csproj" | wc -l || true)
+          if [ "$TESTS" -gt 0 ]; then
+            dotnet test -c Release --no-build --verbosity normal
+          else
+            echo "No test projects found. Skipping dotnet test."
+          fi
+
+      - name: Instalar dotnet-ef
+        shell: bash
+        run: |
+          dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          dotnet ef --version
+
+      - name: Generar script idempotente de migraciones (best-effort)
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set +e
+          dotnet ef migrations script --idempotent \
+            -p Chetango.Infrastructure/Chetango.Infrastructure.csproj \
+            -s Chetango.Api/Chetango.Api.csproj \
+            -o artifacts/migrate.sql
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "-- TODO: agregar IDesignTimeDbContextFactory<ChetangoDbContext> para generar script en CI" > artifacts/migrate.sql
+            echo "WARNING: EF script generation failed (exit $EXIT_CODE). Placeholder created."
+          fi
+          set -e
+
+      - name: Publicar artefacto (migrate.sql)
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrate-sql
+          path: artifacts/migrate.sql
+
