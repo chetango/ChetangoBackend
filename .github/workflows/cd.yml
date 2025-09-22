@@ -2,16 +2,15 @@ name: CD
 
 on:
   push:
-    branches: [ main ]   # Dev automático al hacer merge a main
+    branches: [ main ]        # Dev automático al merge a main
   workflow_dispatch:
     inputs:
       environment:
-        type: choice
-        description: "Destino del despliegue"
+        description: Destino (dev/qa/prod)
         required: true
-        options: [dev, qa, prod]
+        default: dev
       version:
-        description: "Tag/versión a promover (ej: v0.1.0)"
+        description: Tag/versión a promover (ej: v0.1.0)
         required: false
 
 jobs:
@@ -20,8 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - uses: actions/checkout@v4
-      - name: TODO - Descargar artefactos de build (si existen)
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: TODO - Descargar artefactos
         uses: actions/download-artifact@v4
         with:
           name: migrate-sql
@@ -29,7 +29,7 @@ jobs:
         continue-on-error: true
       - name: TODO - Ejecutar migraciones Dev
         run: echo "Futuro: ejecutar artifacts/migrate.sql contra ChetangoDB_Dev"
-      - name: TODO - Publicar API en Dev
+      - name: TODO - Publicar API Dev
         run: echo "Futuro: deploy a Azure/App Service"
       - name: TODO - Smoke tests
         run: echo "Futuro: GET /health y /ready"
@@ -39,7 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: qa
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: TODO - Promover versión a QA
         run: |
           echo "Futuro: usar tag '${{ github.event.inputs.version }}'"
@@ -49,13 +50,15 @@ jobs:
 
   deploy_prod:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lest
     environment: prod
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: TODO - Promover versión a PROD
         run: |
           echo "Futuro: usar tag '${{ github.event.inputs.version }}'"
           echo "Futuro: ejecutar migrate.sql en ChetangoDB_Prod"
           echo "Futuro: publicar API Prod"
           echo "Futuro: smoke tests"
+
