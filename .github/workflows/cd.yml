@@ -2,15 +2,15 @@ name: CD
 
 on:
   push:
-    branches: [ main ]        # Dev automático al merge a main
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       environment:
-        description: Destino (dev/qa/prod)
+        description: "Destino (dev/qa/prod)"
         required: true
         default: dev
       version:
-        description: Tag/versión a promover (ej: v0.1.0)
+        description: "Tag/versión a promover (ej: v0.1.0)"
         required: false
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: TODO - Descargar artefactos
+      - name: Descargar artefactos (si existen)
         uses: actions/download-artifact@v4
         with:
           name: migrate-sql
@@ -51,6 +51,18 @@ jobs:
   deploy_prod:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
     runs-on: ubuntu-latest
-    env
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: TODO - Promover versión a PROD
+        run: |
+          echo "Futuro: usar tag '${{ github.event.inputs.version }}'"
+          echo "Futuro: ejecutar migrate.sql en ChetangoDB_Prod"
+          echo "Futuro: publicar API Prod"
+          echo "Futuro: smoke tests"
+
+
+
 
 
