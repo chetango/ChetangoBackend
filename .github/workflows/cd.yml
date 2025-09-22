@@ -50,15 +50,7 @@ jobs:
 
   deploy_prod:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
-    runs-on: ubuntu-lest
-    environment: prod
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: TODO - Promover versión a PROD
-        run: |
-          echo "Futuro: usar tag '${{ github.event.inputs.version }}'"
-          echo "Futuro: ejecutar migrate.sql en ChetangoDB_Prod"
-          echo "Futuro: publicar API Prod"
-          echo "Futuro: smoke tests"
+    runs-on: ubuntu-latest
+    env
+
 
