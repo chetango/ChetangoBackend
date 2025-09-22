@@ -10,7 +10,7 @@ on:
         required: true
         default: dev
       version:
-        description: "Tag/versión a promover (ej: v0.1.0)"
+        description: "Tag/version a promover (e.g. v0.1.0)"
         required: false
 
 jobs:
@@ -21,18 +21,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Descargar artefactos (si existen)
+
+      - name: Download artifact (if exists)
         uses: actions/download-artifact@v4
         with:
           name: migrate-sql
           path: artifacts
         continue-on-error: true
-      - name: TODO - Ejecutar migraciones Dev
-        run: echo "Futuro: ejecutar artifacts/migrate.sql contra ChetangoDB_Dev"
-      - name: TODO - Publicar API Dev
-        run: echo "Futuro: deploy a Azure/App Service"
-      - name: TODO - Smoke tests
-        run: echo "Futuro: GET /health y /ready"
+
+      - name: TODO - Run DB migrations (Dev)
+        run: |
+          echo "Future: run artifacts/migrate.sql against ChetangoDB_Dev"
+
+      - name: TODO - Publish API (Dev)
+        run: |
+          echo "Future: deploy to Azure/App Service"
+
+      - name: TODO - Smoke tests (Dev)
+        run: |
+          echo "Future: GET /health && GET /ready"
 
   deploy_qa:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'qa'
@@ -41,12 +48,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: TODO - Promover versión a QA
+
+      - name: TODO - Promote to QA
         run: |
-          echo "Futuro: usar tag '${{ github.event.inputs.version }}'"
-          echo "Futuro: ejecutar migrate.sql en ChetangoDB_QA"
-          echo "Futuro: publicar API QA"
-          echo "Futuro: smoke tests"
+          echo "Future: use tag '${{ github.event.inputs.version }}'"
+          echo "Future: run migrate.sql on ChetangoDB_QA"
+          echo "Future: publish API QA"
+          echo "Future: smoke tests"
 
   deploy_prod:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
@@ -55,12 +63,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: TODO - Promover versión a PROD
+
+      - name: TODO - Promote to PROD
         run: |
-          echo "Futuro: usar tag '${{ github.event.inputs.version }}'"
-          echo "Futuro: ejecutar migrate.sql en ChetangoDB_Prod"
-          echo "Futuro: publicar API Prod"
-          echo "Futuro: smoke tests"
+          echo "Future: use tag '${{ github.event.inputs.version }}'"
+          echo "Future: run migrate.sql on ChetangoDB_Prod"
+          echo "Future: publish API Prod"
+          echo "Future: smoke tests"
+
 
 
 
