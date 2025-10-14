@@ -14,7 +14,7 @@ public class AsistenciaConfiguration : IEntityTypeConfiguration<Asistencia>
         builder.HasOne(a => a.Clase)
             .WithMany(c => c.Asistencias)
             .HasForeignKey(a => a.IdClase)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade); // Borrar clase -> elimina asistencias relacionadas
 
         builder.HasOne(a => a.Alumno)
             .WithMany(al => al.Asistencias)
@@ -24,7 +24,7 @@ public class AsistenciaConfiguration : IEntityTypeConfiguration<Asistencia>
         builder.HasOne(a => a.PaqueteUsado)
             .WithMany()
             .HasForeignKey(a => a.IdPaqueteUsado)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict); // Evita borrar paquete si existe asistencia referenciándolo
 
         builder.HasOne(a => a.Estado)
             .WithMany()
@@ -34,6 +34,6 @@ public class AsistenciaConfiguration : IEntityTypeConfiguration<Asistencia>
         builder.Property(a => a.Observacion)
             .HasMaxLength(500);
 
-        builder.HasIndex(a => new { a.IdClase, a.IdAlumno }).IsUnique(); // Evita doble asistencia del mismo alumno a misma clase
+        builder.HasIndex(a => new { a.IdClase, a.IdAlumno }).IsUnique(); // Impide duplicar asistencia del mismo alumno a la misma clase
     }
 }

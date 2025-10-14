@@ -1,16 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
+using Chetango.Application.Common; // añadido
 
 namespace Chetango.Infrastructure.Persistence
 {
-    public class ChetangoDbContext : DbContext
+    // DbContext principal: orquesta acceso a datos y aplica las configuraciones Fluent de cada entidad
+    // Expone DbSet solo para agregados / catálogos necesarios en consultas y reglas de dominio
+    public class ChetangoDbContext : DbContext, IAppDbContext // implementa interfaz
     {
         public ChetangoDbContext(DbContextOptions<ChetangoDbContext> options)
             : base(options)
         {
         }
 
+        // Catálogos y entidades de negocio
         public DbSet<Alumno> Alumnos => Set<Alumno>();
         public DbSet<Asistencia> Asistencias => Set<Asistencia>();
         public DbSet<Auditoria> Auditorias => Set<Auditoria>();
@@ -26,6 +30,7 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<Usuario> Usuarios => Set<Usuario>();
         public DbSet<UsuarioRol> UsuariosRoles => Set<UsuarioRol>();
 
+        // Estados y tipos
         public DbSet<EstadoAsistencia> EstadosAsistencia => Set<EstadoAsistencia>();
         public DbSet<EstadoUsuario> EstadosUsuario => Set<EstadoUsuario>();
         public DbSet<EstadoPaquete> EstadosPaquete => Set<EstadoPaquete>();
@@ -41,8 +46,9 @@ namespace Chetango.Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            // Aplica automáticamente todas las configuraciones IEntityTypeConfiguration de este ensamblado
+            // Aplica automáticamente todas las clases IEntityTypeConfiguration en el ensamblado (mapeos centralizados)
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChetangoDbContext).Assembly);
+            // Punto de extensión futuro: interceptores de auditoría / soft delete / filtros globales
         }
     }
 }

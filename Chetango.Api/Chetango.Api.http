@@ -1,5 +1,22 @@
 @Chetango.Api_HostAddress = http://localhost:5129
 
+### Dev ping (no auth)
+GET {{Chetango.Api_HostAddress}}/dev/ping
+Accept: application/json
+
+### Seed status (no auth)
+GET {{Chetango.Api_HostAddress}}/api/dev/seed/status
+Accept: application/json
+
+### Clases del alumno sembrado (no auth)
+GET {{Chetango.Api_HostAddress}}/api/dev/alumnos/seeded/clases
+Accept: application/json
+
+### Clases por IdAlumno específico (no auth)
+# Reemplace el id si desea probar otro
+GET {{Chetango.Api_HostAddress}}/api/dev/alumnos/bbbbbbbb-cccc-dddd-eeee-ffffffffffff/clases
+Accept: application/json
+
 GET {{Chetango.Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
