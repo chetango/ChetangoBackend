@@ -1,6 +1,5 @@
 ﻿namespace Chetango.Application;
 
-public class Class1
-{
-
-}
+// Punto de entrada de la capa Application.
+// Aquí se ubicarán Commands, Queries, DTOs, Handlers y validaciones (FluentValidation en futuro).
+public class _Placeholder { }

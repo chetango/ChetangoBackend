@@ -660,6 +660,11 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333333"),
                             Nombre = "PAS"
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-1111-2222-3333-555555555555"),
+                            Nombre = "OID"
                         });
                 });
 

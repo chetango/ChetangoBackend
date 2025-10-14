@@ -8,34 +8,33 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
 {
     public void Configure(EntityTypeBuilder<Usuario> builder)
     {
-        builder.ToTable("Usuarios");
+        builder.ToTable("Usuarios"); // Nombre físico de la tabla
         builder.HasKey(u => u.IdUsuario);
 
         builder.Property(u => u.NombreUsuario)
             .IsRequired()
             .HasMaxLength(100);
+        builder.HasIndex(u => u.NombreUsuario).IsUnique(); // Evita duplicados de login
 
-        builder.HasIndex(u => u.NombreUsuario).IsUnique();
-
-        // PasswordHash eliminado
+        // PasswordHash eliminado (auth delegada a Azure Entra ID)
 
         builder.Property(u => u.NumeroDocumento)
             .IsRequired()
             .HasMaxLength(50);
-        builder.HasIndex(u => u.NumeroDocumento).IsUnique();
+        builder.HasIndex(u => u.NumeroDocumento).IsUnique(); // Documento único
 
         builder.Property(u => u.Correo)
             .IsRequired()
             .HasMaxLength(150);
-        builder.HasIndex(u => u.Correo).IsUnique();
+        builder.HasIndex(u => u.Correo).IsUnique(); // Email único
 
         builder.Property(u => u.Telefono)
             .HasMaxLength(30);
 
         builder.Property(u => u.FechaCreacion)
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("GETUTCDATE()"); // Timestamp UTC por defecto
 
-        // FKs explícitas
+        // Relaciones (DeleteBehavior.Restrict para evitar borrado en cascada accidental)
         builder.HasOne(u => u.TipoDocumento)
             .WithMany(td => td.Usuarios)
             .HasForeignKey(u => u.IdTipoDocumento)

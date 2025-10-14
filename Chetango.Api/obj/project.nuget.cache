@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "7QMb2DeblIc=",
+  "dgSpecHash": "bYOTX5yNnVw=",
   "success": true,
   "projectFilePath": "C:\\Users\\PadillJ1\\OneDrive - Unisys\\Desktop\\AppChetango\\ChetangoBackend\\Chetango.Api\\Chetango.Api.csproj",
   "expectedPackageFiles": [
@@ -9,6 +9,9 @@
     "C:\\Users\\PadillJ1\\.nuget\\packages\\azure.security.keyvault.certificates\\4.6.0\\azure.security.keyvault.certificates.4.6.0.nupkg.sha512",
     "C:\\Users\\PadillJ1\\.nuget\\packages\\azure.security.keyvault.secrets\\4.6.0\\azure.security.keyvault.secrets.4.6.0.nupkg.sha512",
     "C:\\Users\\PadillJ1\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
+    "C:\\Users\\PadillJ1\\.nuget\\packages\\mediatr\\11.1.0\\mediatr.11.1.0.nupkg.sha512",
+    "C:\\Users\\PadillJ1\\.nuget\\packages\\mediatr.contracts\\1.0.1\\mediatr.contracts.1.0.1.nupkg.sha512",
+    "C:\\Users\\PadillJ1\\.nuget\\packages\\mediatr.extensions.microsoft.dependencyinjection\\11.1.0\\mediatr.extensions.microsoft.dependencyinjection.11.1.0.nupkg.sha512",
     "C:\\Users\\PadillJ1\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.0\\microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",
     "C:\\Users\\PadillJ1\\.nuget\\packages\\microsoft.aspnetcore.authentication.openidconnect\\8.0.0\\microsoft.aspnetcore.authentication.openidconnect.8.0.0.nupkg.sha512",
     "C:\\Users\\PadillJ1\\.nuget\\packages\\microsoft.aspnetcore.cryptography.internal\\8.0.1\\microsoft.aspnetcore.cryptography.internal.8.0.1.nupkg.sha512",
@@ -161,30 +164,5 @@
     "C:\\Users\\PadillJ1\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
     "C:\\Users\\PadillJ1\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "message": "Chetango.Api depends on Microsoft.Identity.Web (>= 3.0.2) but Microsoft.Identity.Web 3.0.2 was not found. Microsoft.Identity.Web 3.1.0 was resolved instead.",
-      "projectPath": "C:\\Users\\PadillJ1\\OneDrive - Unisys\\Desktop\\AppChetango\\ChetangoBackend\\Chetango.Api\\Chetango.Api.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\PadillJ1\\OneDrive - Unisys\\Desktop\\AppChetango\\ChetangoBackend\\Chetango.Api\\Chetango.Api.csproj",
-      "libraryId": "Microsoft.Identity.Web",
-      "targetGraphs": [
-        "net9.0"
-      ]
-    },
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "message": "Chetango.Api depends on Microsoft.Identity.Web.MicrosoftGraph (>= 3.0.2) but Microsoft.Identity.Web.MicrosoftGraph 3.0.2 was not found. Microsoft.Identity.Web.MicrosoftGraph 3.1.0 was resolved instead.",
-      "projectPath": "C:\\Users\\PadillJ1\\OneDrive - Unisys\\Desktop\\AppChetango\\ChetangoBackend\\Chetango.Api\\Chetango.Api.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\PadillJ1\\OneDrive - Unisys\\Desktop\\AppChetango\\ChetangoBackend\\Chetango.Api\\Chetango.Api.csproj",
-      "libraryId": "Microsoft.Identity.Web.MicrosoftGraph",
-      "targetGraphs": [
-        "net9.0"
-      ]
-    }
-  ]
+  "logs": []
 }

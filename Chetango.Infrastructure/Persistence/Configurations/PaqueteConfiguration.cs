@@ -13,15 +13,17 @@ public class PaqueteConfiguration : IEntityTypeConfiguration<Paquete>
 
         builder.Property(p => p.ClasesDisponibles).IsRequired();
         builder.Property(p => p.ClasesUsadas).IsRequired();
-        builder.Property(p => p.ValorPaquete).HasColumnType("decimal(18,2)");
+        builder.Property(p => p.ValorPaquete).HasColumnType("decimal(18,2)"); // Manejo consistente de dinero
         builder.Property(p => p.FechaActivacion).IsRequired();
         builder.Property(p => p.FechaVencimiento).IsRequired();
 
+        // Relación unidireccional Alumno->Paquete (no se navega desde Alumno de momento para reducir carga)
         builder.HasOne(p => p.Alumno)
-            .WithMany() // unidireccional
+            .WithMany()
             .HasForeignKey(p => p.IdAlumno)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Pago opcional (puede ser cortesía). SetNull preserva historial si se elimina el pago.
         builder.HasOne(p => p.Pago)
             .WithMany(pg => pg.Paquetes)
             .HasForeignKey(p => p.IdPago)
@@ -37,6 +39,7 @@ public class PaqueteConfiguration : IEntityTypeConfiguration<Paquete>
             .HasForeignKey(p => p.IdEstado)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Consultas frecuentes: paquetes activos próximos a vencer por alumno
         builder.HasIndex(p => new { p.IdAlumno, p.FechaVencimiento });
     }
 }
