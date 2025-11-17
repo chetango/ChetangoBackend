@@ -5,6 +5,10 @@ using Microsoft.Identity.Web;
 using System.Security.Claims;
 using MediatR;
 using Chetango.Application.Clases.Queries.GetClasesDeAlumno;
+using Chetango.Application.Asistencias.Commands.RegistrarAsistencia;
+using Chetango.Application.Asistencias.Commands.ActualizarEstadoAsistencia;
+using Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase;
+using Chetango.Application.Asistencias.Queries.GetAsistenciasPorAlumno;
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
@@ -288,6 +292,131 @@ if (app.Environment.IsDevelopment())
         });
     })
     .AllowAnonymous();
+}
+
+// ====== ENDPOINTS DE ASISTENCIAS ======
+
+// POST /api/asistencias - Registrar asistencia (protegido)
+app.MapPost("/api/asistencias", async (
+    Chetango.Application.Asistencias.Commands.RegistrarAsistencia.RegistrarAsistenciaCommand command,
+    IMediator mediator) =>
+{
+    var result = await mediator.Send(command);
+    return result.Succeeded ? Results.Created($"/api/asistencias/{result.Value}", result.Value) : Results.BadRequest(result.Error);
+}).RequireAuthorization("ApiScope");
+
+// PUT /api/asistencias/{id}/estado - Actualizar estado de asistencia (protegido)
+app.MapPut("/api/asistencias/{id:guid}/estado", async (
+    Guid id,
+    Chetango.Application.Asistencias.Commands.ActualizarEstadoAsistencia.ActualizarEstadoAsistenciaCommand command,
+    IMediator mediator) =>
+{
+    if (id != command.IdAsistencia) return Results.BadRequest("ID en ruta no coincide con el comando");
+    var result = await mediator.Send(command);
+    return result.Succeeded ? Results.NoContent() : Results.BadRequest(result.Error);
+}).RequireAuthorization("ApiScope");
+
+// GET /api/clases/{idClase}/asistencias - Obtener asistencias de una clase (protegido, profesor/admin)
+app.MapGet("/api/clases/{idClase:guid}/asistencias", async (
+    Guid idClase,
+    IMediator mediator) =>
+{
+    var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
+    var result = await mediator.Send(query);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+}).RequireAuthorization("ApiScope");
+
+// GET /api/alumnos/{idAlumno}/asistencias - Obtener asistencias de un alumno (protegido, owner/admin)
+app.MapGet("/api/alumnos/{idAlumno:guid}/asistencias", async (
+    Guid idAlumno,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    IMediator mediator,
+    ClaimsPrincipal user,
+    ChetangoDbContext db) =>
+{
+    // Autorización: validar que el usuario autenticado sea dueño del alumno (por correo)
+    var email = user.FindFirst(ClaimTypes.Email)?.Value
+             ?? user.FindFirst("preferred_username")?.Value
+             ?? user.FindFirst("upn")?.Value
+             ?? user.FindFirst("emails")?.Value;
+
+    var ownerCorreo = await db.Alumnos
+        .AsNoTracking()
+        .Where(a => a.IdAlumno == idAlumno)
+        .Select(a => a.Usuario.Correo)
+        .SingleOrDefaultAsync();
+
+    if (ownerCorreo is null) return Results.NotFound();
+    if (!string.Equals(ownerCorreo, email, StringComparison.OrdinalIgnoreCase)) return Results.Forbid();
+
+    var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorAlumno.GetAsistenciasPorAlumnoQuery(idAlumno, fechaDesde, fechaHasta);
+    var result = await mediator.Send(query);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+}).RequireAuthorization("ApiScope");
+
+// ====== ENDPOINTS DE DESARROLLO PARA ASISTENCIAS (solo Development, sin auth) ======
+if (app.Environment.IsDevelopment())
+{
+    // POST /api/dev/asistencias - Registrar asistencia sin autenticación (testing)
+    app.MapPost("/api/dev/asistencias", async (
+        Chetango.Application.Asistencias.Commands.RegistrarAsistencia.RegistrarAsistenciaCommand command,
+        IMediator mediator) =>
+    {
+        var result = await mediator.Send(command);
+        return result.Succeeded ? Results.Created($"/api/dev/asistencias/{result.Value}", result.Value) : Results.BadRequest(result.Error);
+    }).AllowAnonymous();
+
+    // PUT /api/dev/asistencias/{id}/estado - Actualizar estado sin autenticación (testing)
+    app.MapPut("/api/dev/asistencias/{id:guid}/estado", async (
+        Guid id,
+        Chetango.Application.Asistencias.Commands.ActualizarEstadoAsistencia.ActualizarEstadoAsistenciaCommand command,
+        IMediator mediator) =>
+    {
+        if (id != command.IdAsistencia) return Results.BadRequest("ID en ruta no coincide con el comando");
+        var result = await mediator.Send(command);
+        return result.Succeeded ? Results.NoContent() : Results.BadRequest(result.Error);
+    }).AllowAnonymous();
+
+    // GET /api/dev/clases/{idClase}/asistencias - Obtener asistencias de clase sin autenticación
+    app.MapGet("/api/dev/clases/{idClase:guid}/asistencias", async (
+        Guid idClase,
+        IMediator mediator) =>
+    {
+        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
+        var result = await mediator.Send(query);
+        return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+    }).AllowAnonymous();
+
+    // GET /api/dev/alumnos/{idAlumno}/asistencias - Obtener asistencias de alumno sin autenticación
+    app.MapGet("/api/dev/alumnos/{idAlumno:guid}/asistencias", async (
+        Guid idAlumno,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta,
+        IMediator mediator) =>
+    {
+        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorAlumno.GetAsistenciasPorAlumnoQuery(idAlumno, fechaDesde, fechaHasta);
+        var result = await mediator.Send(query);
+        return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+    }).AllowAnonymous();
+
+    // Atajo: asistencias del alumno sembrado por defecto
+    app.MapGet("/api/dev/alumnos/seeded/asistencias", async (IMediator mediator) =>
+    {
+        var idAlumno = Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorAlumno.GetAsistenciasPorAlumnoQuery(idAlumno, null, null);
+        var result = await mediator.Send(query);
+        return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+    }).AllowAnonymous();
+
+    // Atajo: asistencias de la clase sembrada por defecto
+    app.MapGet("/api/dev/clases/seeded/asistencias", async (IMediator mediator) =>
+    {
+        var idClase = Guid.Parse("dddddddd-eeee-ffff-0000-111111111111");
+        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
+        var result = await mediator.Send(query);
+        return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+    }).AllowAnonymous();
 }
 
 // Endpoint temporal generado por plantilla (se eliminará al avanzar con CQRS / Controllers)
