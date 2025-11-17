@@ -10,7 +10,9 @@ namespace Chetango.Application.Common
     public interface IAppDbContext
     {
         DbSet<Asistencia> Asistencias { get; }
-        // ...puedes exponer más DbSet si otros handlers lo requieren
+        
+        // Método genérico para acceder a otros DbSets sin exponerlos explícitamente
+        DbSet<TEntity> Set<TEntity>() where TEntity : class;
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
