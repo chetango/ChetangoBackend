@@ -7,7 +7,7 @@ namespace Chetango.Application.Asistencias.Commands.RegistrarAsistencia;
 public record RegistrarAsistenciaCommand(
     Guid IdClase,
     Guid IdAlumno,
-    Guid IdPaquete,
-    int IdEstado, // 1=Presente, 2=Ausente, 3=Justificada
-    string? Observacion
+    Guid IdPaqueteUsado,
+    int IdEstadoAsistencia, // 1=Presente, 2=Ausente, 3=Justificada
+    string? Observaciones
 ) : IRequest<Result<Guid>>;

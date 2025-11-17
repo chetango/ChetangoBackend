@@ -34,7 +34,7 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
 
         // 3. Validar que el paquete pertenece al alumno y está activo
         var paquete = await _db.Set<Paquete>()
-            .FirstOrDefaultAsync(p => p.IdPaquete == request.IdPaquete && p.IdAlumno == request.IdAlumno, cancellationToken);
+            .FirstOrDefaultAsync(p => p.IdPaquete == request.IdPaqueteUsado && p.IdAlumno == request.IdAlumno, cancellationToken);
 
         if (paquete is null)
             return Result<Guid>.Failure("El paquete especificado no existe o no pertenece al alumno.");
@@ -55,7 +55,7 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
             return Result<Guid>.Failure("Ya existe un registro de asistencia para este alumno en esta clase.");
 
         // 5. Si el estado es Presente (1), validar que haya clases disponibles
-        if (request.IdEstado == 1) // Presente
+        if (request.IdEstadoAsistencia == 1) // Presente
         {
             if (paquete.ClasesUsadas >= paquete.ClasesDisponibles)
                 return Result<Guid>.Failure("El paquete no tiene clases disponibles.");
@@ -70,9 +70,9 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
             IdAsistencia = Guid.NewGuid(),
             IdClase = request.IdClase,
             IdAlumno = request.IdAlumno,
-            IdPaqueteUsado = request.IdPaquete,
-            IdEstado = request.IdEstado,
-            Observacion = request.Observacion
+            IdPaqueteUsado = request.IdPaqueteUsado,
+            IdEstado = request.IdEstadoAsistencia,
+            Observacion = request.Observaciones
         };
 
         _db.Asistencias.Add(asistencia);
