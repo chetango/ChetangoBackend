@@ -1,7 +1,15 @@
 name: CI
+
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ develop, main ]   # PRs a develop y main
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'chore/**'
+      - 'ci/**'
+      - 'cd/**'
   workflow_dispatch: {}
 
 jobs:
@@ -65,4 +73,5 @@ jobs:
         with:
           name: migrate-sql
           path: artifacts/migrate.sql
+
 
