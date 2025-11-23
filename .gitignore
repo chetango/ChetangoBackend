@@ -1,34 +1,112 @@
-# Ignore build results
-bin/
-obj/
-*.user
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio cache/options
+.vs/
 *.suo
-*.cache
-*.log
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
 
-# Ignore VS Code settings
+## Visual Studio Code
 .vscode/
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-# Ignore .NET secrets
-secrets.json
+## Rider
+.idea/
+*.sln.iml
+*.DotSettings.user
 
-# Ignore NuGet packages
-*.nupkg
-*.snupkg
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
 
-# Ignore compiled files
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/Properties/launchSettings.json
+
+## Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+*.cache
 *.dll
 *.exe
-*.pdb
 
-# Ignore test results
-TestResults/
+## NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
 
-# Ignore temporary files
-*.tmp
-*.temp
+## Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+
+## Entity Framework migrations backup
 *.bak
 
-Planning-Chetango-App-main
-LogdeCambios
-LogdeCambios/, artifacts/, .log, scripts/.local.*
+## User-specific files
+secrets.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+!appsettings.QA.json
+
+## Project-specific folders to ignore
+Planning-Chetango-App-main/
+LogdeCambios/
+scripts/.local.*
+
+## Restore logs
+*.log
+api_restore.log
+restore.log
