@@ -13,6 +13,7 @@
 *.userprefs
 
 ## Visual Studio Code
+obj/
 .vscode/
 !.vscode/tasks.json
 !.vscode/launch.json
