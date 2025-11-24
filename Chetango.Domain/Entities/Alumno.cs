@@ -7,6 +7,11 @@ namespace Chetango.Domain.Entities
         public Guid IdUsuario { get; set; }
         public Usuario Usuario { get; set; } = null!;
 
+        // Nuevos campos agregados
+        public DateTime FechaInscripcion { get; set; }
+        public int IdEstado { get; set; }
+        public EstadoAlumno Estado { get; set; } = null!;
+
         // Relaciones
         // Paquetes ahora navegan desde Paquete -> Alumno
         public ICollection<Pago> Pagos { get; set; } = new List<Pago>();

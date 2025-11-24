@@ -19,5 +19,11 @@ namespace Chetango.Domain.Entities.Estados
         public EstadoAsistencia Estado { get; set; } = null!;
 
         public string? Observacion { get; set; }
+
+        // Campos de auditoría
+        public DateTime FechaRegistro { get; set; }  // Equivalente a FechaCreacion
+        public DateTime? FechaModificacion { get; set; }
+        public string UsuarioCreacion { get; set; } = null!;
+        public string? UsuarioModificacion { get; set; }
     }
 }

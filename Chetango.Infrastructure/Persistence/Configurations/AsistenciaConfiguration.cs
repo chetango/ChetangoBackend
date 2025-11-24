@@ -34,6 +34,15 @@ public class AsistenciaConfiguration : IEntityTypeConfiguration<Asistencia>
         builder.Property(a => a.Observacion)
             .HasMaxLength(500);
 
+        // Campos de auditoría
+        builder.Property(a => a.FechaRegistro)
+            .HasDefaultValueSql("GETDATE()");
+        builder.Property(a => a.UsuarioCreacion)
+            .HasMaxLength(256)
+            .HasDefaultValueSql("SUSER_SNAME()");
+        builder.Property(a => a.UsuarioModificacion)
+            .HasMaxLength(256);
+
         builder.HasIndex(a => new { a.IdClase, a.IdAlumno }).IsUnique(); // Impide duplicar asistencia del mismo alumno a la misma clase
     }
 }

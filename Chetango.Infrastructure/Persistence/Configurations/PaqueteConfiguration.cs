@@ -17,6 +17,15 @@ public class PaqueteConfiguration : IEntityTypeConfiguration<Paquete>
         builder.Property(p => p.FechaActivacion).IsRequired();
         builder.Property(p => p.FechaVencimiento).IsRequired();
 
+        // Campos de auditoría
+        builder.Property(p => p.FechaCreacion)
+            .HasDefaultValueSql("GETDATE()");
+        builder.Property(p => p.UsuarioCreacion)
+            .HasMaxLength(256)
+            .HasDefaultValueSql("SUSER_SNAME()");
+        builder.Property(p => p.UsuarioModificacion)
+            .HasMaxLength(256);
+
         // Relación unidireccional Alumno->Paquete (no se navega desde Alumno de momento para reducir carga)
         builder.HasOne(p => p.Alumno)
             .WithMany()

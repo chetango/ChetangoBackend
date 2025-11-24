@@ -19,6 +19,15 @@ public class PagoConfiguration : IEntityTypeConfiguration<Pago>
         builder.Property(p => p.FechaPago)
             .IsRequired();
 
+        // Campos de auditoría
+        builder.Property(p => p.FechaCreacion)
+            .HasDefaultValueSql("GETDATE()");
+        builder.Property(p => p.UsuarioCreacion)
+            .HasMaxLength(256)
+            .HasDefaultValueSql("SUSER_SNAME()");
+        builder.Property(p => p.UsuarioModificacion)
+            .HasMaxLength(256);
+
         builder.HasOne(p => p.Alumno)
             .WithMany(a => a.Pagos)
             .HasForeignKey(p => p.IdAlumno)
