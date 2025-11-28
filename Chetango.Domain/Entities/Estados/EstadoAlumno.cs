@@ -1,3 +1,4 @@
+using Chetango.Domain.Entities;
 namespace Chetango.Domain.Entities.Estados
 {
     // Catálogo de estados posibles para un Alumno (Activo, Inactivo, Suspendido, Retirado)

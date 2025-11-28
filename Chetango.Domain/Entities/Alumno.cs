@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using Chetango.Domain.Entities.Estados;
+
 namespace Chetango.Domain.Entities
 {
     public class Alumno
@@ -7,10 +9,16 @@ namespace Chetango.Domain.Entities
         public Guid IdUsuario { get; set; }
         public Usuario Usuario { get; set; } = null!;
 
-        // Nuevos campos agregados
-        public DateTime FechaInscripcion { get; set; }
-        public int IdEstado { get; set; }
-        public EstadoAlumno Estado { get; set; } = null!;
+        [NotMapped]
+        public string NombreCompleto => Usuario?.NombreUsuario ?? string.Empty;
+
+        [NotMapped]
+        public string DocumentoIdentidad => Usuario?.NumeroDocumento ?? string.Empty;
+
+    // Metadata del alumno en sí
+    public DateTime FechaInscripcion { get; set; }
+    public int IdEstado { get; set; }
+    public EstadoAlumno Estado { get; set; } = null!;
 
         // Relaciones
         // Paquetes ahora navegan desde Paquete -> Alumno
