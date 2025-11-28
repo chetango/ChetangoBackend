@@ -15,6 +15,11 @@ namespace Chetango.Domain.Entities
         [NotMapped]
         public string DocumentoIdentidad => Usuario?.NumeroDocumento ?? string.Empty;
 
+    // Metadata del alumno en sí
+    public DateTime FechaInscripcion { get; set; }
+    public int IdEstado { get; set; }
+    public EstadoAlumno Estado { get; set; } = null!;
+
         // Relaciones
         // Paquetes ahora navegan desde Paquete -> Alumno
         public ICollection<Pago> Pagos { get; set; } = new List<Pago>();
