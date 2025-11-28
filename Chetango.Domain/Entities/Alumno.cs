@@ -9,7 +9,6 @@ namespace Chetango.Domain.Entities
         public Guid IdUsuario { get; set; }
         public Usuario Usuario { get; set; } = null!;
 
-<<<<<<< HEAD
         [NotMapped]
         public string NombreCompleto => Usuario?.NombreUsuario ?? string.Empty;
 
@@ -20,12 +19,6 @@ namespace Chetango.Domain.Entities
     public DateTime FechaInscripcion { get; set; }
     public int IdEstado { get; set; }
     public EstadoAlumno Estado { get; set; } = null!;
-=======
-        // Nuevos campos agregados
-        public DateTime FechaInscripcion { get; set; }
-        public int IdEstado { get; set; }
-        public EstadoAlumno Estado { get; set; } = null!;
->>>>>>> origin/develop
 
         // Relaciones
         // Paquetes ahora navegan desde Paquete -> Alumno
