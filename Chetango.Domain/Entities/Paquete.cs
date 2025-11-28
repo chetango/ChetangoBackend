@@ -26,6 +26,12 @@ namespace Chetango.Domain.Entities.Estados
         public TipoPaquete TipoPaquete { get; set; } = null!;
         public decimal ValorPaquete { get; set; }
 
+        // Campos de auditoría
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaModificacion { get; set; }
+        public string UsuarioCreacion { get; set; } = null!;
+        public string? UsuarioModificacion { get; set; }
+
         // Historial de intervalos donde el paquete estuvo congelado (pausas)
         public ICollection<CongelacionPaquete> Congelaciones { get; set; } = new List<CongelacionPaquete>();
     }

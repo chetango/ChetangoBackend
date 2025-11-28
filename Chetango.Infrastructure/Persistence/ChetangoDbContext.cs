@@ -31,6 +31,7 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<UsuarioRol> UsuariosRoles => Set<UsuarioRol>();
 
         // Estados y tipos
+        public DbSet<EstadoAlumno> EstadosAlumno => Set<EstadoAlumno>();
         public DbSet<EstadoAsistencia> EstadosAsistencia => Set<EstadoAsistencia>();
         public DbSet<EstadoUsuario> EstadosUsuario => Set<EstadoUsuario>();
         public DbSet<EstadoPaquete> EstadosPaquete => Set<EstadoPaquete>();

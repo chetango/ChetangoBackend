@@ -14,6 +14,12 @@ namespace Chetango.Domain.Entities
         public MetodoPago MetodoPago { get; set; } = null!;
         public string? Nota { get; set; }
 
+        // Campos de auditoría
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaModificacion { get; set; }
+        public string UsuarioCreacion { get; set; } = null!;
+        public string? UsuarioModificacion { get; set; }
+
         // Relaciones
         public ICollection<Paquete> Paquetes { get; set; } = new List<Paquete>();
     }

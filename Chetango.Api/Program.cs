@@ -135,6 +135,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                         if (usuario.Telefono != newPhone) { usuario.Telefono = newPhone; changed = true; }
                         if (changed) { await db.SaveChangesAsync(); logger.LogInformation("Usuario sincronizado: {Correo}", usuario.Correo); }
                     }
+
+                    // NUEVO: Cargar roles del usuario y agregarlos como Claims
+                    var roles = await db.Set<UsuarioRol>()
+                        .Where(ur => ur.IdUsuario == usuario.IdUsuario)
+                        .Include(ur => ur.Rol)
+                        .Select(ur => ur.Rol.Nombre)
+                        .ToListAsync();
+
+                    if (roles.Any())
+                    {
+                        var identity = principal.Identity as ClaimsIdentity;
+                        foreach (var rol in roles)
+                        {
+                            identity?.AddClaim(new Claim(ClaimTypes.Role, rol));
+                        }
+                        logger.LogInformation("Roles asignados a {Email}: {Roles}", 
+                            usuario.Correo, string.Join(", ", roles));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -282,6 +300,201 @@ app.MapGet("/auth/ping", (ClaimsPrincipal user) =>
     return Results.Ok(new { message = "pong", oid });
 }).RequireAuthorization("ApiScope");
 
+// GET /api/auth/me - Obtener perfil y roles del usuario autenticado
+app.MapGet("/api/auth/me", async (
+    ClaimsPrincipal user,
+    ChetangoDbContext db) =>
+{
+    var email = user.FindFirst(ClaimTypes.Email)?.Value
+             ?? user.FindFirst("preferred_username")?.Value
+             ?? user.FindFirst("upn")?.Value
+             ?? user.FindFirst("emails")?.Value;
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .AsNoTracking()
+        .FirstOrDefaultAsync(u => u.Correo == email);
+
+    if (usuario == null)
+        return Results.NotFound();
+
+    var roles = await db.Set<UsuarioRol>()
+        .Where(ur => ur.IdUsuario == usuario.IdUsuario)
+        .Include(ur => ur.Rol)
+        .Select(ur => ur.Rol.Nombre)
+        .ToListAsync();
+
+    return Results.Ok(new
+    {
+        idUsuario = usuario.IdUsuario,
+        nombre = usuario.NombreUsuario,
+        correo = usuario.Correo,
+        telefono = usuario.Telefono,
+        roles = roles
+    });
+}).RequireAuthorization("ApiScope");
+
+#if DEBUG
+// ==========================================
+// 🔧 ENDPOINTS DE DESARROLLO - SOLO DEBUG
+// ==========================================
+// Estos endpoints NO existen en builds Release (producción)
+// Permiten simular autenticación sin Azure AD para pruebas con Postman/Swagger
+
+// GET /api/dev/usuarios - Listar usuarios disponibles para testing
+app.MapGet("/api/dev/usuarios", async (ChetangoDbContext db) =>
+{
+    var usuarios = await db.Usuarios
+        .AsNoTracking()
+        .Select(u => new
+        {
+            u.Correo,
+            u.NombreUsuario,
+            roles = db.Set<UsuarioRol>()
+                .Where(ur => ur.IdUsuario == u.IdUsuario)
+                .Include(ur => ur.Rol)
+                .Select(ur => ur.Rol.Nombre)
+                .ToList()
+        })
+        .ToListAsync();
+
+    return Results.Ok(new
+    {
+        message = "⚠️ DESARROLLO: Lista de usuarios para testing",
+        usuarios = usuarios
+    });
+})
+.WithTags("🔧 Development Only")
+.WithOpenApi()
+.AllowAnonymous();
+
+// GET /api/dev/me/{email} - Simular GET /api/auth/me sin autenticación
+app.MapGet("/api/dev/me/{email}", async (string email, ChetangoDbContext db) =>
+{
+    var usuario = await db.Usuarios
+        .AsNoTracking()
+        .FirstOrDefaultAsync(u => u.Correo == email);
+
+    if (usuario == null)
+        return Results.NotFound(new { message = $"Usuario con email '{email}' no encontrado" });
+
+    var roles = await db.Set<UsuarioRol>()
+        .Where(ur => ur.IdUsuario == usuario.IdUsuario)
+        .Include(ur => ur.Rol)
+        .Select(ur => ur.Rol.Nombre)
+        .ToListAsync();
+
+    return Results.Ok(new
+    {
+        message = "⚠️ DESARROLLO: Este endpoint simula /api/auth/me sin Azure AD",
+        idUsuario = usuario.IdUsuario,
+        nombre = usuario.NombreUsuario,
+        correo = usuario.Correo,
+        telefono = usuario.Telefono,
+        roles = roles
+    });
+})
+.WithTags("🔧 Development Only")
+.WithOpenApi()
+.AllowAnonymous();
+
+// GET /api/dev/clases/{idClase}/asistencias - Simular endpoint con usuario específico
+app.MapGet("/api/dev/clases/{idClase:guid}/asistencias", async (
+    Guid idClase,
+    string email, // Query param: ?email=jorge.padilla@chetango.com
+    ChetangoDbContext db,
+    IMediator mediator) =>
+{
+    // Verificar que el usuario existe
+    var usuario = await db.Usuarios
+        .AsNoTracking()
+        .FirstOrDefaultAsync(u => u.Correo == email);
+
+    if (usuario == null)
+        return Results.BadRequest(new { message = $"Usuario '{email}' no encontrado. Usa ?email=correo@ejemplo.com" });
+
+    // Obtener roles del usuario
+    var roles = await db.Set<UsuarioRol>()
+        .Where(ur => ur.IdUsuario == usuario.IdUsuario)
+        .Include(ur => ur.Rol)
+        .Select(ur => ur.Rol.Nombre)
+        .ToListAsync();
+
+    // Verificar clase existe
+    var claseExiste = await db.Clases.AnyAsync(c => c.IdClase == idClase);
+    if (!claseExiste)
+        return Results.NotFound(new { message = $"Clase con ID '{idClase}' no encontrada" });
+
+    // Aplicar lógica de autorización
+    if (roles.Contains("Administrador"))
+    {
+        // Admin: acceso total
+        var query = new GetAsistenciasPorClaseQuery(idClase);
+        var result = await mediator.Send(query);
+
+        return Results.Ok(new
+        {
+            message = "⚠️ DESARROLLO: Usuario es Administrador - Acceso total",
+            usuario = email,
+            roles = roles,
+            asistencias = result.Value
+        });
+    }
+
+    if (roles.Contains("Profesor"))
+    {
+        // Profesor: solo sus clases
+        var esProfesorDeClase = await db.Clases
+            .Where(c => c.IdClase == idClase && c.ProfesorPrincipal.Usuario.Correo == email)
+            .AnyAsync();
+
+        if (!esProfesorDeClase)
+        {
+            return Results.Json(
+                new
+                {
+                    message = "⚠️ DESARROLLO: Usuario es Profesor pero NO es dueño de esta clase - 403 Forbidden",
+                    usuario = email,
+                    roles = roles,
+                    error = "No tienes permiso para ver las asistencias de esta clase"
+                },
+                statusCode: 403);
+        }
+
+        var query = new GetAsistenciasPorClaseQuery(idClase);
+        var result = await mediator.Send(query);
+
+        return Results.Ok(new
+        {
+            message = "⚠️ DESARROLLO: Usuario es Profesor dueño de esta clase - Acceso permitido",
+            usuario = email,
+            roles = roles,
+            asistencias = result.Value
+        });
+    }
+
+    // Sin roles válidos
+    return Results.Json(
+        new
+        {
+            message = "⚠️ DESARROLLO: Usuario no tiene rol Administrador ni Profesor - 403 Forbidden",
+            usuario = email,
+            roles = roles,
+            error = "No tienes permiso para ver asistencias"
+        },
+        statusCode: 403);
+})
+.WithTags("🔧 Development Only")
+.WithOpenApi()
+.AllowAnonymous();
+
+#endif
+// ==========================================
+// FIN ENDPOINTS DE DESARROLLO
+// ==========================================
+
 // Endpoint de consulta de clases por alumno (ejemplo CQRS)
 app.MapGet("/api/alumnos/{idAlumno:guid}/clases", async (
     Guid idAlumno,
@@ -393,11 +606,48 @@ app.MapPut("/api/asistencias/{id:guid}/estado", async (
 // GET /api/clases/{idClase}/asistencias - Obtener asistencias de una clase (protegido, profesor/admin)
 app.MapGet("/api/clases/{idClase:guid}/asistencias", async (
     Guid idClase,
-    IMediator mediator) =>
+    IMediator mediator,
+    ClaimsPrincipal user,
+    ChetangoDbContext db) =>
 {
-    var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
-    var result = await mediator.Send(query);
-    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var email = user.FindFirst(ClaimTypes.Email)?.Value
+             ?? user.FindFirst("preferred_username")?.Value
+             ?? user.FindFirst("upn")?.Value
+             ?? user.FindFirst("emails")?.Value;
+
+    // Administrador: acceso total a cualquier clase
+    if (roles.Contains("Administrador"))
+    {
+        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
+        var result = await mediator.Send(query);
+        return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+    }
+
+    // Profesor: solo puede ver asistencias de SUS clases
+    if (roles.Contains("Profesor"))
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return Results.Unauthorized();
+
+        // Verificar que la clase pertenece al profesor autenticado
+        var esProfesorDeClase = await db.Clases
+            .AsNoTracking()
+            .Include(c => c.ProfesorPrincipal)
+            .ThenInclude(p => p.Usuario)
+            .Where(c => c.IdClase == idClase && c.ProfesorPrincipal.Usuario.Correo == email)
+            .AnyAsync();
+
+        if (!esProfesorDeClase)
+            return Results.Forbid(); // 403: El profesor no imparte esta clase
+
+        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
+        var result = await mediator.Send(query);
+        return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+    }
+
+    // Si no es Admin ni Profesor, denegar acceso
+    return Results.Forbid();
 }).RequireAuthorization("ApiScope");
 
 // GET /api/alumnos/{idAlumno}/asistencias - Obtener asistencias de un alumno (protegido, owner/admin)
@@ -450,16 +700,6 @@ if (app.Environment.IsDevelopment())
         if (id != command.IdAsistencia) return Results.BadRequest("ID en ruta no coincide con el comando");
         var result = await mediator.Send(command);
         return result.Succeeded ? Results.NoContent() : Results.BadRequest(result.Error);
-    }).AllowAnonymous();
-
-    // GET /api/dev/clases/{idClase}/asistencias - Obtener asistencias de clase sin autenticación
-    app.MapGet("/api/dev/clases/{idClase:guid}/asistencias", async (
-        Guid idClase,
-        IMediator mediator) =>
-    {
-        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
-        var result = await mediator.Send(query);
-        return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
     }).AllowAnonymous();
 
     // GET /api/dev/alumnos/{idAlumno}/asistencias - Obtener asistencias de alumno sin autenticación
