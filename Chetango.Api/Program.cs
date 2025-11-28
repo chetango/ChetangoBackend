@@ -9,11 +9,16 @@ using Chetango.Application.Asistencias.Commands.RegistrarAsistencia;
 using Chetango.Application.Asistencias.Commands.ActualizarEstadoAsistencia;
 using Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase;
 using Chetango.Application.Asistencias.Queries.GetAsistenciasPorAlumno;
+using Chetango.Application.Asistencias.Admin.DTOs;
+using Chetango.Application.Asistencias.Admin.Queries.GetDiasConClasesAdmin;
+using Chetango.Application.Asistencias.Admin.Queries.GetClasesDelDiaAdmin;
+using Chetango.Application.Asistencias.Admin.Queries.GetResumenAsistenciasClaseAdmin;
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
 using Chetango.Api.Infrastructure; // MigrationRunner
 using Microsoft.OpenApi.Models; // Swagger security
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -156,6 +161,10 @@ builder.Services.AddAuthorization(options =>
     }
 });
 
+var adminAuthPolicies = requiredRoles.Length > 0
+    ? new[] { "ApiScope", "ApiRole" }
+    : new[] { "ApiScope" };
+
 // Registro de MediatR compatible con v11
 builder.Services.AddMediatR(typeof(GetClasesDeAlumnoQuery).Assembly);
 
@@ -200,6 +209,71 @@ app.UseHttpsRedirection();
 app.UseCors("DefaultCors");
 app.UseAuthentication(); // Debe ir antes de Authorization
 app.UseAuthorization();
+
+// ====== ENDPOINTS ADMINISTRADOR - ASISTENCIAS ======
+var adminAsistencias = app.MapGroup("/api/admin/asistencias")
+    .WithTags("Admin - Asistencias")
+    .RequireAuthorization(adminAuthPolicies);
+
+adminAsistencias.MapGet("/dias-con-clases", async (
+    IMediator mediator,
+    CancellationToken ct) =>
+{
+    var result = await mediator.Send(new GetDiasConClasesAdminQuery(), ct);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+})
+.WithName("GetDiasConClasesAdmin")
+.WithSummary("Obtiene el rango de fecha útil para el calendario del administrador.")
+.WithDescription("Devuelve el día actual, el rango de los últimos 7 días y qué días tienen clases programadas.")
+.Produces<DiasConClasesAdminDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithOpenApi();
+
+adminAsistencias.MapGet("/clases-del-dia", async (
+    DateOnly fecha,
+    IMediator mediator,
+    CancellationToken ct) =>
+{
+    var result = await mediator.Send(new GetClasesDelDiaAdminQuery(fecha), ct);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+})
+.WithName("GetClasesDelDiaAdmin")
+.WithSummary("Lista las clases disponibles para la fecha seleccionada.")
+.WithDescription("La respuesta alimenta el combo \"Clase del Día\" con nombre, horario y profesor principal.")
+.Produces<ClasesDelDiaAdminDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.WithOpenApi(op =>
+{
+    if (op.Parameters.Count > 0)
+    {
+        op.Parameters[0].Description = "Fecha a consultar en formato YYYY-MM-DD";
+    }
+    return op;
+});
+
+adminAsistencias.MapGet("/clase/{idClase:guid}/resumen", async (
+    Guid idClase,
+    IMediator mediator,
+    CancellationToken ct) =>
+{
+    var result = await mediator.Send(new GetResumenAsistenciasClaseAdminQuery(idClase), ct);
+    if (!result.Succeeded)
+    {
+        var message = result.Error ?? "Error al obtener el resumen";
+        return string.Equals(message, "Clase no encontrada", StringComparison.OrdinalIgnoreCase)
+            ? Results.NotFound(message)
+            : Results.BadRequest(message);
+    }
+
+    return Results.Ok(result.Value);
+})
+.WithName("GetResumenAsistenciasClaseAdmin")
+.WithSummary("Obtiene el estado completo de asistencias para una clase.")
+.WithDescription("Incluye alumnos, estado de paquete, estado de asistencia y contadores para la tarjeta del administrador.")
+.Produces<ResumenAsistenciasClaseAdminDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status404NotFound)
+.WithOpenApi();
 
 // Endpoint protegido de prueba: permite verificar que el token es válido
 app.MapGet("/auth/ping", (ClaimsPrincipal user) =>

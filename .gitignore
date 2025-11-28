@@ -111,3 +111,8 @@ scripts/.local.*
 *.log
 api_restore.log
 restore.log
+Informe_Inyeccion_SQL_Jorge_Padilla.docx.md
+SQL_Injection_Tests_Asistencias.postman_collection.json
+Resultados_SQLi_Asistencias.json
+SQL_Injection_Tests.postman_collection
+Trabajos_universidad
