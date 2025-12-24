@@ -40,9 +40,22 @@ public static class MigrationRunner
             }
             else if (env.IsEnvironment("QA") || env.IsProduction())
             {
-                var migrator = db.Database.GetService<IMigrator>();
-                migrator.Migrate(QaProdTarget);
-                logger.LogInformation("Migrations applied up to {Target} ({Env}).", QaProdTarget, env.EnvironmentName);
+                // IMPORTANT: Never migrate *down* automatically at startup.
+                // If the DB is ahead of the QA/Prod target, we keep it as-is.
+                var lastApplied = appliedBefore.LastOrDefault();
+                if (!string.IsNullOrWhiteSpace(lastApplied)
+                    && string.CompareOrdinal(lastApplied, QaProdTarget) > 0)
+                {
+                    logger.LogWarning(
+                        "Database is ahead of target migration. LastApplied={LastApplied} Target={Target}. Skipping downgrade.",
+                        lastApplied, QaProdTarget);
+                }
+                else
+                {
+                    var migrator = db.Database.GetService<IMigrator>();
+                    migrator.Migrate(QaProdTarget);
+                    logger.LogInformation("Migrations applied up to {Target} ({Env}).", QaProdTarget, env.EnvironmentName);
+                }
             }
 
             var appliedAfter = db.Database.GetAppliedMigrations().ToList();

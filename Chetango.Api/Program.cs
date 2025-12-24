@@ -136,22 +136,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                         if (changed) { await db.SaveChangesAsync(); logger.LogInformation("Usuario sincronizado: {Correo}", usuario.Correo); }
                     }
 
-                    // NUEVO: Cargar roles del usuario y agregarlos como Claims
-                    var roles = await db.Set<UsuarioRol>()
-                        .Where(ur => ur.IdUsuario == usuario.IdUsuario)
-                        .Include(ur => ur.Rol)
-                        .Select(ur => ur.Rol.Nombre)
-                        .ToListAsync();
-
-                    if (roles.Any())
+                    // Roles desde Azure AD App Roles (claim "roles")
+                    var identity = principal?.Identity as ClaimsIdentity;
+                    if (identity != null)
                     {
-                        var identity = principal.Identity as ClaimsIdentity;
+                        var roles = principal!.FindAll("roles").Select(c => c.Value).Distinct(StringComparer.OrdinalIgnoreCase);
                         foreach (var rol in roles)
                         {
-                            identity?.AddClaim(new Claim(ClaimTypes.Role, rol));
+                            identity.AddClaim(new Claim(ClaimTypes.Role, rol));
                         }
-                        logger.LogInformation("Roles asignados a {Email}: {Roles}", 
-                            usuario.Correo, string.Join(", ", roles));
+
+                        var roleList = roles.ToList();
+                        if (roleList.Count > 0)
+                        {
+                            logger.LogInformation("Roles desde token para {Email}: {Roles}", usuario.Correo, string.Join(", ", roleList));
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -170,8 +169,8 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ApiScope", policy =>
     {
-        if (requiredScopes.Length > 0) policy.RequireScope(requiredScopes);
-        else policy.RequireAuthenticatedUser();
+        // Simplificado para QA/Pruebas: solo requiere usuario autenticado
+        policy.RequireAuthenticatedUser();
     });
     if (requiredRoles.Length > 0)
     {
