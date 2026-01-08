@@ -4,6 +4,13 @@
 [Ll]og/
 [Ll]ogs/
 
+## Log files - Development and temporary logs
+*.log
+*.txt
+!scripts/*.sql
+!docs/*.md
+!docs/*.txt
+
 ## Visual Studio cache/options
 .vs/
 *.suo
@@ -102,21 +109,11 @@ appsettings.*.json
 !appsettings.Development.json
 !appsettings.QA.json
 
-## Project-specific folders to ignore
+## Project-specific folders and files to ignore
 Planning-Chetango-App-main/
 LogdeCambios/
 scripts/.local.*
-
-## Restore logs
-*.log
-api_restore.log
-restore.log
-Informe_Inyeccion_SQL_Jorge_Padilla.docx.md
-SQL_Injection_Tests_Asistencias.postman_collection.json
-Resultados_SQLi_Asistencias.json
-SQL_Injection_Tests.postman_collection
-Trabajos_universidad
-scripts 
+*.Application.sln
 
 ## Local scratch files
 create.sql
