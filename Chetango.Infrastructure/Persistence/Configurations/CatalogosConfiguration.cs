@@ -68,22 +68,6 @@ public class TipoProfesorConfiguration : IEntityTypeConfiguration<TipoProfesor>
     }
 }
 
-public class RolConfiguration : IEntityTypeConfiguration<Rol>
-{
-    public void Configure(EntityTypeBuilder<Rol> builder)
-    {
-        builder.ToTable("Roles");
-        builder.HasKey(r => r.Id);
-        builder.Property(r => r.Nombre).IsRequired().HasMaxLength(100);
-        builder.HasIndex(r => r.Nombre).IsUnique();
-        builder.HasData(
-            new Rol { Id = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), Nombre = "Administrador" },
-            new Rol { Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), Nombre = "Alumno" },
-            new Rol { Id = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"), Nombre = "Profesor" }
-        );
-    }
-}
-
 public class RolEnClaseConfiguration : IEntityTypeConfiguration<RolEnClase>
 {
     public void Configure(EntityTypeBuilder<RolEnClase> builder)

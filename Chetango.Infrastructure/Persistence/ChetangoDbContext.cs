@@ -28,7 +28,6 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<Profesor> Profesores => Set<Profesor>();
         public DbSet<TarifaProfesor> TarifasProfesor => Set<TarifaProfesor>();
         public DbSet<Usuario> Usuarios => Set<Usuario>();
-        public DbSet<UsuarioRol> UsuariosRoles => Set<UsuarioRol>();
 
         // Estados y tipos
         public DbSet<EstadoAlumno> EstadosAlumno => Set<EstadoAlumno>();
@@ -40,7 +39,6 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<TipoClase> TiposClase => Set<TipoClase>();
         public DbSet<TipoPaquete> TiposPaquete => Set<TipoPaquete>();
         public DbSet<TipoProfesor> TiposProfesor => Set<TipoProfesor>();
-        public DbSet<Rol> Roles => Set<Rol>();
         public DbSet<RolEnClase> RolesEnClase => Set<RolEnClase>();
         public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
 

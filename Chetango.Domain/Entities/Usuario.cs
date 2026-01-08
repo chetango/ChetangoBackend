@@ -16,7 +16,6 @@ namespace Chetango.Domain.Entities
         public DateTime FechaCreacion { get; set; }
 
         // Relaciones
-        public ICollection<UsuarioRol> Roles { get; set; } = new List<UsuarioRol>();
         public ICollection<Alumno> Alumnos { get; set; } = new List<Alumno>();
         public ICollection<Profesor> Profesores { get; set; } = new List<Profesor>();
         public ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
