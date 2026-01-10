@@ -49,11 +49,12 @@ jobs:
         shell: bash
         run: |
           dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Verificar dotnet-ef
         shell: bash
-        run: dotnet ef --version
+        run: |
+          export PATH="$HOME/.dotnet/tools:$PATH"
+          dotnet ef --version
 
       - name: Generar script idempotente de migraciones (best-effort)
         shell: bash
