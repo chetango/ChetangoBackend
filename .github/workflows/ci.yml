@@ -45,24 +45,22 @@ jobs:
             echo "No test projects found. Skipping dotnet test."
           fi
 
-      - name: Instalar dotnet-ef
+      - name: Instalar dotnet-ef como herramienta local
         shell: bash
         run: |
-          dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
+          dotnet new tool-manifest || true
+          dotnet tool install dotnet-ef || dotnet tool update dotnet-ef
 
       - name: Verificar dotnet-ef
         shell: bash
-        run: |
-          export PATH="$HOME/.dotnet/tools:$PATH"
-          dotnet ef --version
+        run: dotnet tool run dotnet-ef -- --version
 
       - name: Generar script idempotente de migraciones (best-effort)
         shell: bash
         run: |
-          export PATH="$HOME/.dotnet/tools:$PATH"
           mkdir -p artifacts
           set +e
-          dotnet ef migrations script --idempotent \
+          dotnet tool run dotnet-ef -- migrations script --idempotent \
             -p Chetango.Infrastructure/Chetango.Infrastructure.csproj \
             -s Chetango.Api/Chetango.Api.csproj \
             -o artifacts/migrate.sql
