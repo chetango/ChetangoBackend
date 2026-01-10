@@ -59,6 +59,7 @@ jobs:
       - name: Generar script idempotente de migraciones (best-effort)
         shell: bash
         run: |
+          export PATH="$HOME/.dotnet/tools:$PATH"
           mkdir -p artifacts
           set +e
           dotnet ef migrations script --idempotent \
