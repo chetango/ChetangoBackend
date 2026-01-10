@@ -5,6 +5,16 @@ using Microsoft.Identity.Web;
 using System.Security.Claims;
 using MediatR;
 using Chetango.Application.Clases.Queries.GetClasesDeAlumno;
+using Chetango.Application.Clases.Commands.CrearClase;
+using Chetango.Application.Clases.Commands.EditarClase;
+using Chetango.Application.Clases.Commands.CancelarClase;
+using Chetango.Application.Clases.Queries.GetClaseById;
+using Chetango.Application.Clases.Queries.GetClasesDeProfesor;
+using Chetango.Application.Clases.Queries.GetTiposClase;
+using Chetango.Application.Clases.Queries.GetProfesores;
+using Chetango.Application.Clases.Queries.GetAlumnos;
+using Chetango.Application.Clases.Queries.GetPaquetesDeAlumno;
+using Chetango.Application.Clases.DTOs;
 using Chetango.Application.Asistencias.Commands.RegistrarAsistencia;
 using Chetango.Application.Asistencias.Commands.ActualizarEstadoAsistencia;
 using Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase;
@@ -391,6 +401,180 @@ app.MapGet("/api/alumnos/{idAlumno:guid}/clases", async (
 }).RequireAuthorization("ApiScope");
 
 // Endpoints /dev/ de clases eliminados - usar endpoints protegidos con autenticación
+
+// ====== ENDPOINTS DE CATÁLOGOS/LOOKUPS ======
+
+// GET /api/tipos-clase - Obtener todos los tipos de clase disponibles
+app.MapGet("/api/tipos-clase", async (IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetTiposClaseQuery());
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/profesores - Obtener todos los profesores (solo Admin)
+app.MapGet("/api/profesores", async (IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetProfesoresQuery());
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/alumnos - Obtener todos los alumnos (Admin y Profesores)
+app.MapGet("/api/alumnos", async (IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetAlumnosQuery());
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// GET /api/alumnos/{idAlumno}/paquetes - Obtener paquetes de un alumno (Admin y Profesores)
+app.MapGet("/api/alumnos/{idAlumno:guid}/paquetes", async (
+    Guid idAlumno,
+    bool soloActivos = true,
+    IMediator mediator = null!) =>
+{
+    var query = new GetPaquetesDeAlumnoQuery(idAlumno, soloActivos);
+    var result = await mediator.Send(query);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// ====== ENDPOINTS DE CLASES ======
+
+// POST /api/clases - Crear una nueva clase (Admin o Profesor para sí mismo)
+app.MapPost("/api/clases", async (
+    CrearClaseDTO dto,
+    IMediator mediator,
+    ClaimsPrincipal user,
+    ChetangoDbContext db) =>
+{
+    // Extraer información del usuario
+    var oidClaim = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var command = new CrearClaseCommand(
+        IdProfesorPrincipal: dto.IdProfesorPrincipal,
+        IdTipoClase: dto.IdTipoClase,
+        Fecha: dto.Fecha,
+        HoraInicio: dto.HoraInicio,
+        HoraFin: dto.HoraFin,
+        CupoMaximo: dto.CupoMaximo,
+        Observaciones: dto.Observaciones,
+        IdUsuarioActual: oidClaim,
+        EsAdmin: esAdmin
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Created($"/api/clases/{result.Value}", new { idClase = result.Value }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// PUT /api/clases/{id} - Editar una clase existente (Admin o Profesor dueño)
+app.MapPut("/api/clases/{id:guid}", async (
+    Guid id,
+    EditarClaseDTO dto,
+    IMediator mediator,
+    ClaimsPrincipal user) =>
+{
+    var oidClaim = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var command = new EditarClaseCommand(
+        IdClase: id,
+        IdTipoClase: dto.IdTipoClase,
+        IdProfesor: dto.IdProfesor,
+        FechaHoraInicio: dto.FechaHoraInicio,
+        DuracionMinutos: dto.DuracionMinutos,
+        CupoMaximo: dto.CupoMaximo,
+        Observaciones: dto.Observaciones,
+        IdUsuarioActual: oidClaim,
+        EsAdmin: esAdmin
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// DELETE /api/clases/{id} - Cancelar una clase (Admin o Profesor dueño)
+app.MapDelete("/api/clases/{id:guid}", async (
+    Guid id,
+    IMediator mediator,
+    ClaimsPrincipal user) =>
+{
+    var oidClaim = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var command = new CancelarClaseCommand(
+        IdClase: id,
+        IdUsuarioActual: oidClaim,
+        EsAdmin: esAdmin
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// GET /api/clases/{id} - Obtener detalle de una clase (Admin, Profesor dueño o monitor)
+app.MapGet("/api/clases/{id:guid}", async (
+    Guid id,
+    IMediator mediator,
+    ClaimsPrincipal user) =>
+{
+    var oidClaim = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var query = new GetClaseByIdQuery(
+        IdClase: id,
+        IdUsuarioActual: oidClaim,
+        EsAdmin: esAdmin
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// GET /api/profesores/{idProfesor}/clases - Listar clases de un profesor (Admin o Profesor dueño)
+app.MapGet("/api/profesores/{idProfesor:guid}/clases", async (
+    Guid idProfesor,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    int pageNumber = 1,
+    int pageSize = 10,
+    IMediator mediator = null!,
+    ClaimsPrincipal user = null!) =>
+{
+    var oidClaim = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var query = new GetClasesDeProfesorQuery(
+        IdProfesor: idProfesor,
+        FechaDesde: fechaDesde,
+        FechaHasta: fechaHasta,
+        PageNumber: pageNumber,
+        PageSize: pageSize,
+        IdUsuarioActual: oidClaim,
+        EsAdmin: esAdmin
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
 
 // ====== ENDPOINTS DE ASISTENCIAS ======
 

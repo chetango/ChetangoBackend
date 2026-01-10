@@ -9,6 +9,8 @@ namespace Chetango.Domain.Entities
         public TipoClase TipoClase { get; set; } = null!;
         public TimeSpan HoraInicio { get; set; }
         public TimeSpan HoraFin { get; set; }
+        public int CupoMaximo { get; set; }
+        public string? Observaciones { get; set; }
 
         public Guid IdProfesorPrincipal { get; set; }
         public Profesor ProfesorPrincipal { get; set; } = null!;
