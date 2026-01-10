@@ -1,0 +1,91 @@
+using Chetango.Application.Common;
+using Chetango.Domain.Entities.Estados;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace Chetango.Application.Clases.Commands.EditarClase;
+
+public class EditarClaseCommandHandler : IRequestHandler<EditarClaseCommand, Result<bool>>
+{
+    private readonly IAppDbContext _db;
+
+    public EditarClaseCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<Result<bool>> Handle(EditarClaseCommand request, CancellationToken cancellationToken)
+    {
+        // 1. Validar que la clase existe
+        var clase = await _db.Set<Chetango.Domain.Entities.Clase>()
+            .Include(c => c.ProfesorPrincipal)
+            .ThenInclude(p => p.Usuario)
+            .FirstOrDefaultAsync(c => c.IdClase == request.IdClase, cancellationToken);
+
+        if (clase is null)
+            return Result<bool>.Failure("La clase especificada no existe.");
+
+        // 2. Validación de ownership: Profesor solo puede editar sus clases
+        if (!request.EsAdmin)
+        {
+            if (clase.ProfesorPrincipal.IdUsuario.ToString() != request.IdUsuarioActual)
+                return Result<bool>.Failure("No tienes permiso para editar esta clase.");
+        }
+
+        // 3. Validar que la fecha es futura
+        if (request.FechaHoraInicio <= DateTime.Now)
+            return Result<bool>.Failure("La clase debe programarse para una fecha y hora futura.");
+
+        // 4. Validar duración mínima
+        if (request.DuracionMinutos < 30)
+            return Result<bool>.Failure("La duración mínima de una clase es 30 minutos.");
+
+        // 5. Validar cupo máximo
+        if (request.CupoMaximo < 1)
+            return Result<bool>.Failure("El cupo máximo debe ser al menos 1.");
+
+        // 6. Validar que el tipo de clase existe
+        var tipoClaseExiste = await _db.Set<TipoClase>()
+            .AsNoTracking()
+            .AnyAsync(tc => tc.Id == request.IdTipoClase, cancellationToken);
+
+        if (!tipoClaseExiste)
+            return Result<bool>.Failure("El tipo de clase especificado no existe.");
+
+        // 7. Validar que el profesor existe
+        var profesor = await _db.Set<Profesor>()
+            .Include(p => p.Usuario)
+            .FirstOrDefaultAsync(p => p.IdProfesor == request.IdProfesor, cancellationToken);
+
+        if (profesor is null)
+            return Result<bool>.Failure("El profesor especificado no existe.");
+
+        // 8. Validar que no hay conflicto de horario (excluyendo esta misma clase)
+        var fechaHoraFin = request.FechaHoraInicio.AddMinutes(request.DuracionMinutos);
+        var horaInicioTimeSpan = request.FechaHoraInicio.TimeOfDay;
+        var horaFinTimeSpan = fechaHoraFin.TimeOfDay;
+        
+        var tieneConflicto = await _db.Set<Chetango.Domain.Entities.Clase>()
+            .Where(c => c.IdProfesorPrincipal == request.IdProfesor
+                     && c.IdClase != request.IdClase // Excluir la clase actual
+                     && c.Fecha == request.FechaHoraInicio.Date)
+            .AnyAsync(c => 
+                (horaInicioTimeSpan >= c.HoraInicio && horaInicioTimeSpan < c.HoraFin) ||
+                (horaFinTimeSpan > c.HoraInicio && horaFinTimeSpan <= c.HoraFin) ||
+                (horaInicioTimeSpan <= c.HoraInicio && horaFinTimeSpan >= c.HoraFin),
+                cancellationToken);
+
+        if (tieneConflicto)
+            return Result<bool>.Failure("El profesor ya tiene una clase programada en ese horario.");
+
+        // 9. Actualizar la clase
+        clase.IdTipoClase = request.IdTipoClase;
+        clase.IdProfesorPrincipal = request.IdProfesor;
+        clase.Fecha = request.FechaHoraInicio.Date;
+        clase.HoraInicio = horaInicioTimeSpan;
+        clase.HoraFin = horaFinTimeSpan;
+        clase.CupoMaximo = request.CupoMaximo;
+        clase.Observaciones = request.Observaciones;
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Result<bool>.Success(true);
+    }
+}
