@@ -1,4 +1,6 @@
 using Chetango.Application.Common;
+using Chetango.Application.Paquetes.Commands.DescontarClase;
+using Chetango.Application.Paquetes.Queries.ValidarPaqueteDisponible;
 using Chetango.Domain.Entities.Estados;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -8,8 +10,13 @@ namespace Chetango.Application.Asistencias.Commands.RegistrarAsistencia;
 public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsistenciaCommand, Result<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly IMediator _mediator;
 
-    public RegistrarAsistenciaCommandHandler(IAppDbContext db) => _db = db;
+    public RegistrarAsistenciaCommandHandler(IAppDbContext db, IMediator mediator)
+    {
+        _db = db;
+        _mediator = mediator;
+    }
 
     public async Task<Result<Guid>> Handle(RegistrarAsistenciaCommand request, CancellationToken cancellationToken)
     {
@@ -32,19 +39,13 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
         if (!alumnoExiste)
             return Result<Guid>.Failure("El alumno especificado no existe.");
 
-        // 3. Validar que el paquete pertenece al alumno y está activo
+        // 3. Validar que el paquete pertenece al alumno
         var paquete = await _db.Set<Paquete>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.IdPaquete == request.IdPaqueteUsado && p.IdAlumno == request.IdAlumno, cancellationToken);
 
         if (paquete is null)
             return Result<Guid>.Failure("El paquete especificado no existe o no pertenece al alumno.");
-
-        // Estados: 1=Activo, 2=Vencido, 3=Congelado, 4=Agotado
-        if (paquete.IdEstado != 1)
-            return Result<Guid>.Failure($"El paquete no está activo (estado actual: {paquete.IdEstado}).");
-
-        if (paquete.FechaVencimiento < DateTime.Today)
-            return Result<Guid>.Failure("El paquete está vencido.");
 
         // 4. Validar que no existe asistencia duplicada (índice único en BD, pero validamos aquí también)
         var existeAsistencia = await _db.Asistencias
@@ -54,14 +55,26 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
         if (existeAsistencia)
             return Result<Guid>.Failure("Ya existe un registro de asistencia para este alumno en esta clase.");
 
-        // 5. Si el estado es Presente (1), validar que haya clases disponibles
+        // 5. Si el estado es Presente (1), validar y descontar clase del paquete
         if (request.IdEstadoAsistencia == 1) // Presente
         {
-            if (paquete.ClasesUsadas >= paquete.ClasesDisponibles)
-                return Result<Guid>.Failure("El paquete no tiene clases disponibles.");
+            // Validar que el paquete está disponible
+            var validarPaqueteResult = await _mediator.Send(
+                new ValidarPaqueteDisponibleQuery(request.IdPaqueteUsado),
+                cancellationToken
+            );
 
-            // Incrementar clases usadas
-            paquete.ClasesUsadas++;
+            if (!validarPaqueteResult.Succeeded)
+                return Result<Guid>.Failure(validarPaqueteResult.Error!);
+
+            // Descontar la clase del paquete
+            var descontarResult = await _mediator.Send(
+                new DescontarClaseCommand(request.IdPaqueteUsado),
+                cancellationToken
+            );
+
+            if (!descontarResult.Succeeded)
+                return Result<Guid>.Failure($"No se pudo descontar la clase del paquete: {descontarResult.Error}");
         }
 
         // 6. Crear el registro de asistencia

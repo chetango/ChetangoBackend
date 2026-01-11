@@ -21,7 +21,7 @@ GO
 -- =====================================================================
 DECLARE @IdUsuarioChetango UNIQUEIDENTIFIER = 'b91e51b9-4094-441e-a5b6-062a846b3868';
 DECLARE @IdUsuarioJorge UNIQUEIDENTIFIER = '8472BC4A-F83E-4A84-AB5B-ABD8C7D3E2AB';
-DECLARE @IdUsuarioJuanDavid UNIQUEIDENTIFIER = '71462106-9863-4fd0-b13d-9878ed231aa6';
+DECLARE @IdUsuarioJuanDavid UNIQUEIDENTIFIER = '6f84b6a7-b0ae-456b-a455-eabae44d2930';
 
 DECLARE @IdProfesorJorge UNIQUEIDENTIFIER = '8f6e460d-328d-4a40-89e3-b8effa76829c';
 DECLARE @IdAlumnoJuanDavid UNIQUEIDENTIFIER = '295093d5-b36f-4737-b68a-ab40ca871b2e';
