@@ -2,8 +2,8 @@
 
 Este documento detalla los módulos principales de la aplicación Chetango, con descripción funcional, usuarios involucrados, estado de implementación y prioridad de desarrollo.
 
-> **Última actualización:** Enero 2026  
-> **Estado general:** MVP Fase 1 - Módulo Asistencias completado
+> **Última actualización:** 11 Enero 2026  
+> **Estado general:** MVP Fase 1 - Módulos Asistencias, Clases, Paquetes y Pagos completados
 
 ---
 
@@ -16,8 +16,8 @@ Este documento detalla los módulos principales de la aplicación Chetango, con 
 | 3. Clases | ✅ Completo | 100% | ✅ MVP |
 | 4. Alumnos | ⚠️ Básico | 20% | Media |
 | 5. Profesores | ⚠️ Básico | 20% | Media |
-| 6. Paquetes | ❌ Pendiente | 0% | Media |
-| 7. Pagos | ❌ Pendiente | 0% | Media |
+| 6. Paquetes | ✅ Completo | 100% | ✅ MVP |
+| 7. Pagos | ✅ Completo | 100% | ✅ MVP |
 | 8. Reportes | ❌ Pendiente | 0% | Baja |
 | 9. Alertas y Notificaciones | ❌ Pendiente | 0% | Baja |
 
@@ -331,23 +331,123 @@ GET /api/profesores/{id}/estadisticas      [ApiScope + Ownership]
 
 ---
 
-## 6. Módulo de Paquetes ❌
+## 6. Módulo de Paquetes ✅
 
-**Estado:** ❌ No implementado  
-**Prioridad:** Media - Siguiente después de Clases
+**Estado:** ✅ Implementado y funcional  
+**Prioridad:** MVP - Crítico
 
 ### Descripción
-Gestión de paquetes de clases adquiridos por alumnos: creación, consumo, congelación.
+Gestión completa de paquetes de clases adquiridos por alumnos: creación, consumo, congelación, y consulta de estado.
 
 ### Usuarios Involucrados
-- **Administrador:** Crea y gestiona paquetes
-- **Alumno:** Consulta estado de sus paquetes
+- **Administrador:** Crea, edita y gestiona todos los paquetes
+- **Alumno:** Consulta estado de sus propios paquetes
 
-### Funciones Pendientes (100%)
-- ❌ Crear paquete al registrar pago
-- ❌ Descontar clase automáticamente al registrar asistencia
-- ❌ Congelar/descongelar paquete
-- ❌ Calcular vencimiento considerando congelaciones
+### Funciones Implementadas (100%)
+- ✅ Crear paquete vinculado a pago
+- ✅ Editar paquete (clases disponibles, fecha vencimiento)
+- ✅ Congelar paquete con fechas inicio/fin
+- ✅ Descongelar paquete activo
+- ✅ Descontar clase automáticamente al registrar asistencia (integrado con Asistencias)
+- ✅ Consultar paquetes de alumno con filtros y paginación
+- ✅ Consultar detalle de paquete con historial de asistencias
+- ✅ Consultar mis paquetes (alumno) con autenticación por email
+- ✅ Obtener estadísticas de paquetes (admin)
+- ✅ Catálogo de tipos de paquetes
+- ✅ Validar disponibilidad de paquete antes de usar
+
+### Endpoints Disponibles
+```
+GET    /api/paquetes/estadisticas              [AdminOnly]
+GET    /api/paquetes                           [AdminOnly] - con filtros y paginación
+GET    /api/paquetes/{id}                      [ApiScope + Ownership por email]
+GET    /api/mis-paquetes                       [ApiScope] - autenticación por email
+GET    /api/alumnos/{id}/paquetes              [ApiScope + Ownership por email]
+GET    /api/paquetes/tipos                     [ApiScope]
+POST   /api/paquetes                           [AdminOnly]
+PUT    /api/paquetes/{id}                      [AdminOnly]
+POST   /api/paquetes/{id}/congelar             [AdminOnly]
+POST   /api/paquetes/{id}/descongelar          [AdminOnly]
+```
+
+### Arquitectura CQRS
+```
+Chetango.Application/Paquetes/
+  Commands/
+    CrearPaquete/
+    EditarPaquete/
+    CongelarPaquete/
+    DescongelarPaquete/
+    DescontarClase/
+  Queries/
+    GetPaqueteById/
+    GetPaquetesDeAlumno/
+    GetPaquetes/
+    GetMisPaquetes/
+    GetEstadisticasPaquetes/
+    GetTiposPaquete/
+    ValidarPaqueteDisponible/
+  DTOs/
+    PaqueteAlumnoDTO
+    PaqueteDetalleDTO
+    CrearPaqueteDTO
+    EditarPaqueteDTO
+    CongelarPaqueteDTO
+    TipoPaqueteDTO
+    CongelacionDTO
+    CongelacionDetalleDTO
+    AsistenciaHistorialDTO
+```
+
+### Validaciones Implementadas
+- ✅ Alumno existe y está activo
+- ✅ Tipo de paquete existe
+- ✅ Pago existe (si se vincula)
+- ✅ Paquete está en estado Activo para descontar clase
+- ✅ Paquete tiene clases disponibles
+- ✅ No está vencido
+- ✅ No está congelado
+- ✅ Congelación no se solapa con otras
+- ✅ Ownership: Alumno solo ve sus propios paquetes
+
+### Estados de Paquete
+- **Activo (1):** Paquete disponible para usar
+- **Vencido (2):** Fecha de vencimiento pasada
+- **Congelado (3):** Temporalmente suspendido
+- **Completado (calculado):** Clases usadas = clases disponibles
+
+### Autenticación
+**Patrón unificado por email:** Todos los endpoints usan `ClaimTypes.Email` o `preferred_username` del token JWT para validación de ownership (consistente con módulos Asistencias y otros).
+
+### Integración con Otros Módulos
+- **Asistencias:** Cuando se registra una asistencia presente, se descuenta automáticamente del paquete del alumno
+- **Pagos:** Al crear un paquete se puede vincular a un pago existente
+- **Catálogos:** Usa tabla `TipoPaquete` con tipos predefinidos (8 Clases, 12 Clases, Mensual Ilimitado, etc.)
+
+### Relaciones
+- **Alumno:** Un paquete pertenece a un alumno
+- **TipoPaquete:** Define el tipo de paquete (8, 12, mensual, etc.)
+- **Pago:** Paquete puede estar vinculado a un pago
+- **Congelaciones:** Múltiples periodos de congelación por paquete
+- **Asistencias:** Asistencias descontadas del paquete (via IdPaqueteUsado)
+
+### Datos de Prueba
+Script `seed_paquetes_catalogos.sql` crea:
+- 4 tipos de paquete (8 Clases, 12 Clases, Mensual Ilimitado, Clase Individual)
+- 5 paquetes de prueba para alumnos
+- 6 alumnos vinculados con usuarios de Entra ID
+
+### Tests Realizados
+✅ 9/9 endpoints probados en Postman con tokens de admin, profesor y alumno
+✅ Autenticación por email validada
+✅ Ownership validation funcionando
+✅ Integración con módulo Asistencias verificada
+
+### Cambios vs Diseño Original
+✅ **Implementado con Clean Architecture completa:** CQRS, MediatR, Result Pattern
+✅ **Autenticación unificada por email:** En lugar de OID GUID (más consistente)
+✅ **Historial de asistencias en detalle:** Incluido en GetPaqueteById y GetMisPaquetes
+✅ **Validación de disponibilidad:** Query específica para validar antes de usar paquete
 - ❌ Alertas por vencimiento próximo
 - ❌ Alertas por clases agotadas
 
