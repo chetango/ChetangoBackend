@@ -3,6 +3,7 @@ using Chetango.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using Chetango.Application.Clases.Queries.GetClasesDeAlumno;
 using Chetango.Application.Clases.Commands.CrearClase;
@@ -13,8 +14,18 @@ using Chetango.Application.Clases.Queries.GetClasesDeProfesor;
 using Chetango.Application.Clases.Queries.GetTiposClase;
 using Chetango.Application.Clases.Queries.GetProfesores;
 using Chetango.Application.Clases.Queries.GetAlumnos;
-using Chetango.Application.Clases.Queries.GetPaquetesDeAlumno;
 using Chetango.Application.Clases.DTOs;
+using Chetango.Application.Paquetes.Commands.CrearPaquete;
+using Chetango.Application.Paquetes.Commands.EditarPaquete;
+using Chetango.Application.Paquetes.Commands.CongelarPaquete;
+using Chetango.Application.Paquetes.Commands.DescongelarPaquete;
+using Chetango.Application.Paquetes.Queries.GetPaqueteById;
+using Chetango.Application.Paquetes.Queries.GetPaquetesDeAlumno;
+using Chetango.Application.Paquetes.Queries.GetPaquetes;
+using Chetango.Application.Paquetes.Queries.GetEstadisticasPaquetes;
+using Chetango.Application.Paquetes.Queries.GetTiposPaquete;
+using Chetango.Application.Paquetes.Queries.GetMisPaquetes;
+using Chetango.Application.Paquetes.DTOs;
 using Chetango.Application.Asistencias.Commands.RegistrarAsistencia;
 using Chetango.Application.Asistencias.Commands.ActualizarEstadoAsistencia;
 using Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase;
@@ -411,6 +422,13 @@ app.MapGet("/api/tipos-clase", async (IMediator mediator) =>
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("ApiScope");
 
+// GET /api/tipos-paquete - Obtener todos los tipos de paquete disponibles
+app.MapGet("/api/tipos-paquete", async (IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetTiposPaqueteQuery());
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
 // GET /api/profesores - Obtener todos los profesores (solo Admin)
 app.MapGet("/api/profesores", async (IMediator mediator) =>
 {
@@ -425,16 +443,211 @@ app.MapGet("/api/alumnos", async (IMediator mediator) =>
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOrProfesor");
 
-// GET /api/alumnos/{idAlumno}/paquetes - Obtener paquetes de un alumno (Admin y Profesores)
+// ====== ENDPOINTS DE PAQUETES ======
+
+// GET /api/paquetes/estadisticas - Obtener estadísticas de paquetes (Admin)
+app.MapGet("/api/paquetes/estadisticas", async (IMediator mediator) =>
+{
+    var query = new GetEstadisticasPaquetesQuery();
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/paquetes - Listar TODOS los paquetes con filtros (Admin)
+app.MapGet("/api/paquetes", async (
+    string? busquedaAlumno = null,
+    int? estado = null,
+    Guid? idTipoPaquete = null,
+    DateTime? fechaVencimientoDesde = null,
+    DateTime? fechaVencimientoHasta = null,
+    int pageNumber = 1,
+    int pageSize = 10,
+    IMediator mediator = null!) =>
+{
+    var query = new GetPaquetesQuery(
+        BusquedaAlumno: busquedaAlumno,
+        Estado: estado,
+        IdTipoPaquete: idTipoPaquete,
+        FechaVencimientoDesde: fechaVencimientoDesde,
+        FechaVencimientoHasta: fechaVencimientoHasta,
+        PageNumber: pageNumber,
+        PageSize: pageSize
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/mis-paquetes - Obtener paquetes del alumno autenticado (con historial completo)
+app.MapGet("/api/mis-paquetes", async (
+    int? estado = null,
+    Guid? idTipoPaquete = null,
+    IMediator mediator = null!,
+    ClaimsPrincipal user = null!) =>
+{
+    var correo = user.FindFirst(ClaimTypes.Email)?.Value
+                 ?? user.FindFirst("preferred_username")?.Value 
+                 ?? string.Empty;
+
+    var query = new GetMisPaquetesQuery(
+        CorreoUsuario: correo,
+        Estado: estado,
+        IdTipoPaquete: idTipoPaquete
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// POST /api/paquetes - Crear un nuevo paquete (solo Admin)
+app.MapPost("/api/paquetes", async (
+    CrearPaqueteDTO dto,
+    IMediator mediator) =>
+{
+    var command = new CrearPaqueteCommand(
+        IdAlumno: dto.IdAlumno,
+        IdTipoPaquete: dto.IdTipoPaquete,
+        ClasesDisponibles: dto.ClasesDisponibles,
+        ValorPaquete: dto.ValorPaquete,
+        DiasVigencia: dto.DiasVigencia,
+        IdPago: dto.IdPago
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Created($"/api/paquetes/{result.Value}", new { idPaquete = result.Value }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/paquetes/{id} - Obtener detalle de un paquete (ApiScope con ownership validation)
+app.MapGet("/api/paquetes/{id:guid}", async (
+    Guid id,
+    IMediator mediator,
+    ClaimsPrincipal user) =>
+{
+    var correo = user.FindFirst(ClaimTypes.Email)?.Value
+                 ?? user.FindFirst("preferred_username")?.Value
+                 ?? string.Empty;
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var query = new GetPaqueteByIdQuery(
+        IdPaquete: id,
+        CorreoUsuarioActual: correo,
+        EsAdmin: esAdmin
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// PUT /api/paquetes/{id} - Editar un paquete (solo Admin)
+app.MapPut("/api/paquetes/{id:guid}", async (
+    Guid id,
+    EditarPaqueteDTO dto,
+    IMediator mediator) =>
+{
+    if (id != dto.IdPaquete) 
+        return Results.BadRequest(new { error = "El ID en la ruta no coincide con el ID del DTO" });
+
+    var command = new EditarPaqueteCommand(
+        IdPaquete: dto.IdPaquete,
+        ClasesDisponibles: dto.ClasesDisponibles,
+        FechaVencimiento: dto.FechaVencimiento
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/paquetes/{id}/congelar - Congelar un paquete (solo Admin)
+app.MapPost("/api/paquetes/{id:guid}/congelar", async (
+    Guid id,
+    CongelarPaqueteDTO dto,
+    IMediator mediator) =>
+{
+    if (id != dto.IdPaquete) 
+        return Results.BadRequest(new { error = "El ID en la ruta no coincide con el ID del DTO" });
+
+    var command = new CongelarPaqueteCommand(
+        IdPaquete: dto.IdPaquete,
+        FechaInicio: dto.FechaInicio,
+        FechaFin: dto.FechaFin,
+        Motivo: dto.Motivo
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(new { mensaje = "Paquete congelado exitosamente" }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/paquetes/{id}/descongelar - Descongelar un paquete (solo Admin)
+app.MapPost("/api/paquetes/{id:guid}/descongelar", async (
+    Guid id,
+    [FromQuery] Guid idCongelacion,
+    IMediator mediator) =>
+{
+    var command = new DescongelarPaqueteCommand(
+        IdPaquete: id,
+        IdCongelacion: idCongelacion
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(new { mensaje = "Paquete descongelado exitosamente" }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/alumnos/{idAlumno}/paquetes - Listar paquetes de un alumno (ApiScope con ownership)
 app.MapGet("/api/alumnos/{idAlumno:guid}/paquetes", async (
     Guid idAlumno,
     bool soloActivos = true,
-    IMediator mediator = null!) =>
+    int? estado = null,
+    Guid? idTipoPaquete = null,
+    DateTime? fechaVencimientoDesde = null,
+    DateTime? fechaVencimientoHasta = null,
+    int pageNumber = 1,
+    int pageSize = 10,
+    IMediator mediator = null!,
+    ClaimsPrincipal user = null!) =>
 {
-    var query = new GetPaquetesDeAlumnoQuery(idAlumno, soloActivos);
+    var correo = user.FindFirst(ClaimTypes.Email)?.Value
+                 ?? user.FindFirst("preferred_username")?.Value
+                 ?? string.Empty;
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var query = new GetPaquetesDeAlumnoQuery(
+        IdAlumno: idAlumno,
+        SoloActivos: soloActivos,
+        Estado: estado,
+        IdTipoPaquete: idTipoPaquete,
+        FechaVencimientoDesde: fechaVencimientoDesde,
+        FechaVencimientoHasta: fechaVencimientoHasta,
+        PageNumber: pageNumber,
+        PageSize: pageSize,
+        CorreoUsuarioActual: correo,
+        EsAdmin: esAdmin
+    );
+
     var result = await mediator.Send(query);
-    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
-}).RequireAuthorization("AdminOrProfesor");
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
 
 // ====== ENDPOINTS DE CLASES ======
 
