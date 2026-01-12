@@ -34,6 +34,9 @@ using Chetango.Application.Asistencias.Admin.DTOs;
 using Chetango.Application.Asistencias.Admin.Queries.GetDiasConClasesAdmin;
 using Chetango.Application.Asistencias.Admin.Queries.GetClasesDelDiaAdmin;
 using Chetango.Application.Asistencias.Admin.Queries.GetResumenAsistenciasClaseAdmin;
+using Chetango.Application.Pagos.Commands;
+using Chetango.Application.Pagos.Queries;
+using Chetango.Application.Pagos.DTOs;
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
@@ -898,6 +901,154 @@ app.MapGet("/api/alumnos/{idAlumno:guid}/asistencias", async (
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
 }).RequireAuthorization("ApiScope");
 
-// Endpoints /dev/ de asistencias eliminados - usar endpoints protegidos con autenticación
+// ====== ENDPOINTS DE PAGOS ======
+
+// GET /api/pagos/metodos-pago - Obtener catálogo de métodos de pago (ApiScope)
+app.MapGet("/api/pagos/metodos-pago", async (IMediator mediator) =>
+{
+    var query = new GetMetodosPagoQuery();
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/pagos/estadisticas - Estadísticas de pagos (AdminOnly)
+app.MapGet("/api/pagos/estadisticas", async (
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    IMediator mediator) =>
+{
+    var query = new GetEstadisticasPagosQuery(fechaDesde, fechaHasta);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/pagos/{id} - Detalle de pago (ApiScope + Ownership)
+app.MapGet("/api/pagos/{id:guid}", async (
+    Guid id,
+    IMediator mediator,
+    ClaimsPrincipal user) =>
+{
+    var emailClaim = user.FindFirst(ClaimTypes.Email)?.Value ?? user.FindFirst("preferred_username")?.Value;
+    if (string.IsNullOrEmpty(emailClaim))
+        return Results.Unauthorized();
+
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var query = new GetPagoByIdQuery(id, emailClaim, esAdmin);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/mis-pagos - Mis pagos (alumno autenticado) (ApiScope)
+app.MapGet("/api/mis-pagos", async (
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    Guid? idMetodoPago,
+    int pageNumber = 1,
+    int pageSize = 10,
+    IMediator mediator = null!,
+    ClaimsPrincipal user = null!) =>
+{
+    var emailClaim = user.FindFirst(ClaimTypes.Email)?.Value ?? user.FindFirst("preferred_username")?.Value;
+    if (string.IsNullOrEmpty(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetMisPagosQuery(
+        emailClaim,
+        fechaDesde,
+        fechaHasta,
+        idMetodoPago,
+        pageNumber,
+        pageSize
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/alumnos/{idAlumno}/pagos - Pagos de alumno (ApiScope + Ownership)
+app.MapGet("/api/alumnos/{idAlumno:guid}/pagos", async (
+    Guid idAlumno,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    Guid? idMetodoPago,
+    int pageNumber = 1,
+    int pageSize = 10,
+    IMediator mediator = null!,
+    ClaimsPrincipal user = null!) =>
+{
+    var emailClaim = user.FindFirst(ClaimTypes.Email)?.Value ?? user.FindFirst("preferred_username")?.Value;
+    if (string.IsNullOrEmpty(emailClaim))
+        return Results.Unauthorized();
+
+    var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    var query = new GetPagosDeAlumnoQuery(
+        idAlumno,
+        emailClaim,
+        esAdmin,
+        fechaDesde,
+        fechaHasta,
+        idMetodoPago,
+        pageNumber,
+        pageSize
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// POST /api/pagos - Registrar pago (AdminOnly)
+app.MapPost("/api/pagos", async (
+    RegistrarPagoDTO dto,
+    IMediator mediator) =>
+{
+    var command = new RegistrarPagoCommand(
+        dto.IdAlumno,
+        dto.FechaPago,
+        dto.MontoTotal,
+        dto.IdMetodoPago,
+        dto.Nota,
+        dto.Paquetes
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PUT /api/pagos/{id} - Editar pago (AdminOnly)
+app.MapPut("/api/pagos/{id:guid}", async (
+    Guid id,
+    EditarPagoDTO dto,
+    IMediator mediator) =>
+{
+    var command = new EditarPagoCommand(
+        id,
+        dto.MontoTotal,
+        dto.IdMetodoPago,
+        dto.Nota
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
 
 app.Run();
