@@ -20,6 +20,19 @@ namespace Chetango.Domain.Entities
     public int IdEstado { get; set; }
     public EstadoAlumno Estado { get; set; } = null!;
 
+        // Perfil
+        public string? AvatarUrl { get; set; }
+        
+        // Contacto de Emergencia
+        public string? ContactoEmergenciaNombre { get; set; }
+        public string? ContactoEmergenciaTelefono { get; set; }
+        public string? ContactoEmergenciaRelacion { get; set; }
+        
+        // Configuración de Notificaciones
+        public bool NotificacionesEmail { get; set; } = true;
+        public bool RecordatoriosClase { get; set; } = true;
+        public bool AlertasPaquete { get; set; } = true;
+
         // Relaciones
         // Paquetes ahora navegan desde Paquete -> Alumno
         public ICollection<Pago> Pagos { get; set; } = new List<Pago>();

@@ -117,3 +117,6 @@ scripts/.local.*
 
 ## Local scratch files
 create.sql
+
+## Uploaded files
+**/wwwroot/uploads/

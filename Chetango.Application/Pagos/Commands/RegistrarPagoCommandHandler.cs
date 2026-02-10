@@ -24,16 +24,32 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
             return Result<RegistrarPagoResponseDTO>.Failure("El monto total debe ser mayor a cero.");
         }
 
-        if (request.Paquetes == null || request.Paquetes.Count == 0)
+        // Validar que al menos haya paquetes nuevos o existentes
+        if ((request.Paquetes == null || request.Paquetes.Count == 0) && 
+            (request.IdsPaquetesExistentes == null || request.IdsPaquetesExistentes.Count == 0))
         {
-            return Result<RegistrarPagoResponseDTO>.Failure("Debe especificar al menos un paquete a crear.");
+            return Result<RegistrarPagoResponseDTO>.Failure("Debe especificar al menos un paquete nuevo o vincular paquetes existentes.");
         }
 
-        // Validar que el alumno existe
-        var alumno = await _db.Set<Alumno>().FindAsync(new object[] { request.IdAlumno }, cancellationToken);
-        if (alumno == null)
+        // Validar que todos los alumnos en los paquetes existen
+        var idsAlumnos = request.Paquetes?.Select(p => p.IdAlumno).Distinct().ToList() ?? new();
+        if (request.IdAlumno.HasValue && !idsAlumnos.Contains(request.IdAlumno.Value))
         {
-            return Result<RegistrarPagoResponseDTO>.Failure("El alumno especificado no existe.");
+            idsAlumnos.Add(request.IdAlumno.Value);
+        }
+        
+        if (!idsAlumnos.Any())
+        {
+            return Result<RegistrarPagoResponseDTO>.Failure("Debe especificar al menos un alumno.");
+        }
+
+        var alumnos = await _db.Set<Alumno>()
+            .Where(a => idsAlumnos.Contains(a.IdAlumno))
+            .ToListAsync(cancellationToken);
+        
+        if (alumnos.Count != idsAlumnos.Count)
+        {
+            return Result<RegistrarPagoResponseDTO>.Failure("Uno o más alumnos especificados no existen.");
         }
 
         // Validar que el método de pago existe
@@ -43,19 +59,37 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
             return Result<RegistrarPagoResponseDTO>.Failure("El método de pago especificado no existe.");
         }
 
-        // Validar que todos los tipos de paquete existen
-        var idsTiposPaquete = request.Paquetes.Select(p => p.IdTipoPaquete).Distinct().ToList();
-        var tiposPaquete = await _db.Set<TipoPaquete>()
-            .Where(tp => idsTiposPaquete.Contains(tp.Id))
-            .ToListAsync(cancellationToken);
-
-        if (tiposPaquete.Count != idsTiposPaquete.Count)
+        // Validar paquetes existentes si se especificaron
+        List<Paquete> paquetesExistentes = new();
+        if (request.IdsPaquetesExistentes != null && request.IdsPaquetesExistentes.Any())
         {
-            return Result<RegistrarPagoResponseDTO>.Failure("Uno o más tipos de paquete especificados no existen.");
+            paquetesExistentes = await _db.Set<Paquete>()
+                .Where(p => request.IdsPaquetesExistentes.Contains(p.IdPaquete) && p.IdPago == null)
+                .ToListAsync(cancellationToken);
+
+            if (paquetesExistentes.Count != request.IdsPaquetesExistentes.Count)
+            {
+                return Result<RegistrarPagoResponseDTO>.Failure("Uno o más paquetes especificados no existen o ya tienen pago asociado.");
+            }
+        }
+
+        // Validar que todos los tipos de paquete existen (solo para nuevos)
+        List<TipoPaquete> tiposPaquete = new();
+        if (request.Paquetes != null && request.Paquetes.Any())
+        {
+            var idsTiposPaquete = request.Paquetes.Select(p => p.IdTipoPaquete).Distinct().ToList();
+            tiposPaquete = await _db.Set<TipoPaquete>()
+                .Where(tp => idsTiposPaquete.Contains(tp.Id))
+                .ToListAsync(cancellationToken);
+
+            if (tiposPaquete.Count != idsTiposPaquete.Count)
+            {
+                return Result<RegistrarPagoResponseDTO>.Failure("Uno o más tipos de paquete especificados no existen.");
+            }
         }
 
         // Validar suma de valores de paquetes si se especificaron
-        var paquetesConValor = request.Paquetes.Where(p => p.ValorPaquete.HasValue).ToList();
+        var paquetesConValor = request.Paquetes?.Where(p => p.ValorPaquete.HasValue).ToList() ?? new();
         if (paquetesConValor.Any())
         {
             var sumaValores = paquetesConValor.Sum(p => p.ValorPaquete!.Value);
@@ -76,50 +110,78 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
         using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
-            // Crear el pago
+            // Obtener el estado "Pendiente Verificación" por defecto
+            var estadoPendiente = await _db.Set<EstadoPago>()
+                .FirstOrDefaultAsync(e => e.Nombre == "Pendiente Verificación", cancellationToken);
+
+            if (estadoPendiente == null)
+            {
+                return Result<RegistrarPagoResponseDTO>.Failure("Estado 'Pendiente Verificación' no encontrado en el sistema.");
+            }
+
+            // Crear el pago (IdAlumno puede ser null para pagos compartidos)
             var pago = new Pago
             {
                 IdPago = Guid.NewGuid(),
-                IdAlumno = request.IdAlumno,
+                IdAlumno = request.IdAlumno ?? idsAlumnos.FirstOrDefault(),
                 FechaPago = request.FechaPago,
                 MontoTotal = request.MontoTotal,
                 IdMetodoPago = request.IdMetodoPago,
+                IdEstadoPago = estadoPendiente.Id,
+                ReferenciaTransferencia = request.ReferenciaTransferencia,
+                UrlComprobante = request.UrlComprobante,
                 Nota = request.Nota,
-                FechaCreacion = DateTime.UtcNow,
+                FechaCreacion = DateTimeHelper.Now,
                 UsuarioCreacion = "Sistema"
             };
 
             _db.Set<Pago>().Add(pago);
             await _db.SaveChangesAsync(cancellationToken);
 
-            // Calcular valor por paquete si no se especificó
-            var valorPorPaquetePorDefecto = request.MontoTotal / request.Paquetes.Count;
+            var idsPaquetes = new List<Guid>();
 
-            // Crear los paquetes asociados
-            var idsPaquetesCreados = new List<Guid>();
-
-            foreach (var paqueteDTO in request.Paquetes)
+            // Vincular paquetes existentes si se especificaron
+            if (paquetesExistentes.Any())
             {
-                var tipoPaquete = tiposPaquete.First(tp => tp.Id == paqueteDTO.IdTipoPaquete);
-
-                var paquete = new Paquete
+                foreach (var paquete in paquetesExistentes)
                 {
-                    IdPaquete = Guid.NewGuid(),
-                    IdAlumno = request.IdAlumno,
-                    IdPago = pago.IdPago, // Vincular al pago
-                    IdTipoPaquete = paqueteDTO.IdTipoPaquete,
-                    ClasesDisponibles = paqueteDTO.ClasesDisponibles,
-                    ClasesUsadas = 0,
-                    FechaActivacion = request.FechaPago,
-                    FechaVencimiento = request.FechaPago.AddDays(paqueteDTO.DiasVigencia),
-                    IdEstado = 1, // Activo
-                    ValorPaquete = paqueteDTO.ValorPaquete ?? valorPorPaquetePorDefecto,
-                    FechaCreacion = DateTime.UtcNow,
-                    UsuarioCreacion = "Sistema"
-                };
+                    paquete.IdPago = pago.IdPago;
+                    paquete.FechaModificacion = DateTimeHelper.Now;
+                    paquete.UsuarioModificacion = "Sistema";
+                    _db.Set<Paquete>().Update(paquete);
+                    idsPaquetes.Add(paquete.IdPaquete);
+                }
+            }
 
-                _db.Set<Paquete>().Add(paquete);
-                idsPaquetesCreados.Add(paquete.IdPaquete);
+            // Crear nuevos paquetes si se especificaron
+            if (request.Paquetes != null && request.Paquetes.Any())
+            {
+                var totalPaquetes = request.Paquetes.Count + paquetesExistentes.Count;
+                var valorPorPaquetePorDefecto = request.MontoTotal / totalPaquetes;
+
+                foreach (var paqueteDTO in request.Paquetes)
+                {
+                    var tipoPaquete = tiposPaquete.First(tp => tp.Id == paqueteDTO.IdTipoPaquete);
+
+                    var paquete = new Paquete
+                    {
+                        IdPaquete = Guid.NewGuid(),
+                        IdAlumno = paqueteDTO.IdAlumno, // Usar IdAlumno del paquete
+                        IdPago = pago.IdPago,
+                        IdTipoPaquete = paqueteDTO.IdTipoPaquete,
+                        ClasesDisponibles = paqueteDTO.ClasesDisponibles,
+                        ClasesUsadas = 0,
+                        FechaActivacion = request.FechaPago,
+                        FechaVencimiento = request.FechaPago.AddDays(paqueteDTO.DiasVigencia),
+                        IdEstado = 1, // Activo
+                        ValorPaquete = paqueteDTO.ValorPaquete ?? valorPorPaquetePorDefecto,
+                        FechaCreacion = DateTimeHelper.Now,
+                        UsuarioCreacion = "Sistema"
+                    };
+
+                    _db.Set<Paquete>().Add(paquete);
+                    idsPaquetes.Add(paquete.IdPaquete);
+                }
             }
 
             await _db.SaveChangesAsync(cancellationToken);
@@ -127,7 +189,7 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
 
             var response = new RegistrarPagoResponseDTO(
                 pago.IdPago,
-                idsPaquetesCreados,
+                idsPaquetes,
                 pago.MontoTotal
             );
 

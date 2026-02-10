@@ -1,0 +1,18 @@
+version:v1.0
+Name [displayName] Required,User name [userPrincipalName] Required,Initial password [passwordProfile] Required,Block sign in (Yes/No) [accountEnabled] Required,First name [givenName],Last name [surname],Job title [jobTitle]
+Santiago Salazar,santiagosalazar@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Santiago,Salazar,Profesor
+Maria Alejandra Rodriguez,mariaalejandra@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Maria Alejandra,Rodriguez,Profesor
+Ana Zoraida Gomez,anazoraida@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Ana Zoraida,Gomez,Profesor
+Laura Machado,lauramachado@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Laura,Machado,Profesor
+Susana Alzate,susanaalzate@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Susana,Alzate,Profesor
+Jhonathan Pachon,jhonathanpachon@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Jhonathan,Pachon,Profesor
+Suly Pachon,sulypachon@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Suly,Pachon,Profesor
+Juan Pablo Gomez,juanpablogomez@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Juan Pablo,Gomez,Alumno
+Diana Diaz,dianadiaz@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Diana,Diaz,Alumno
+Humberto Giraldo,humbertogiraldo@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Humberto,Giraldo,Alumno
+Manuela Gonzales,manuelagonzales@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Manuela,Gonzales,Alumno
+Andrea Solorzano,andreasolorzano@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Andrea,Solorzano,Alumno
+Pablo Murillo,pablomurillo@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Pablo,Murillo,Alumno
+Catalina Sanchez,catalinasanchez@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Catalina,Sanchez,Alumno
+Camilo Tobon,camilotobon@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Camilo,Tobon,Alumno
+Yeny Padilla,yenypadilla@chetangoprueba.onmicrosoft.com,Chetango2026!,No,Yeny,Padilla,Administrador

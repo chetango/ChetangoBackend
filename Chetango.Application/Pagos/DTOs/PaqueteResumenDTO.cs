@@ -2,6 +2,8 @@ namespace Chetango.Application.Pagos.DTOs;
 
 public record PaqueteResumenDTO(
     Guid IdPaquete,
+    Guid IdAlumno,
+    string NombreAlumno,
     string NombreTipoPaquete,
     int ClasesDisponibles,
     int ClasesUsadas,

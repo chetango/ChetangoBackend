@@ -37,6 +37,40 @@ Script heredado para crear datos adicionales de asistencias.
 ### `seed_personas_roles.sql`
 Script heredado para crear personas y roles.
 
+### `seed_metodos_pago.sql`
+Crea los catálogos de métodos de pago (Efectivo, Transferencia, Nequi, etc.).
+
+### `seed_paquetes_catalogos.sql`
+Crea los catálogos de tipos de paquete (4 clases, 8 clases, 12 clases, Mensual).
+
+### `seed_reportes_datos_prueba.sql` ⭐ **NUEVO - MÓDULO REPORTES**
+Crea datos de prueba realistas para el módulo de Reportes.
+
+**Uso:**
+```bash
+sqlcmd -S "(localdb)\MSSQLLocalDB" -d ChetangoDB_Dev -i seed_reportes_datos_prueba.sql
+```
+
+**Crea:**
+- 5 alumnos adicionales con diferentes perfiles
+- 45 pagos distribuidos en los últimos 6 meses
+- ~12 paquetes con estados variados (Activos, Vencidos, Por vencer, Agotados)
+- ~40 clases de los últimos 3 meses con asistencias
+- ~5 clases futuras (próximos 7 días) con pocos inscritos para alertas
+- ~160 asistencias con diferentes tasas de asistencia por alumno
+
+**Prerequisitos:**
+- ✅ `seed_usuarios_prueba_ciam.sql` ejecutado
+- ✅ `seed_metodos_pago.sql` ejecutado
+- ✅ `seed_paquetes_catalogos.sql` ejecutado
+
+**Características:**
+- ✅ Idempotente (puede ejecutarse múltiples veces)
+- ✅ Transaccional (todo o nada)
+- ✅ Datos realistas para pruebas de reportes
+- ✅ Incluye datos para todas las alertas del dashboard
+- ✅ Distribución temporal correcta para gráficas de tendencias
+
 ### `update_tiposclase_tango.sql`
 Actualiza los tipos de clase con información de Tango.
 
@@ -74,12 +108,42 @@ Limpia el historial en el ambiente QA.
    dotnet run --project ../Chetango.Api/Chetango.Api.csproj --launch-profile https-qa
    ```
 
-2. **Crear usuarios de prueba**:
+2. **Crear catálogos base**:
+   ```bash
+   # Métodos de pago
+   sqlcmd -S "(localdb)\MSSQLLocalDB" -d ChetangoDB_Dev -i seed_metodos_pago.sql
+   
+   # Tipos de paquete
+   sqlcmd -S "(localdb)\MSSQLLocalDB" -d ChetangoDB_Dev -i seed_paquetes_catalogos.sql
+   ```
+
+3. **Crear usuarios de prueba**:
    ```bash
    sqlcmd -S "(localdb)\MSSQLLocalDB" -d ChetangoDB_Dev -i seed_usuarios_prueba_ciam.sql
    ```
 
-3. **Verificar**: Probar login con cualquiera de los 3 usuarios en Postman o tu aplicación frontend.
+4. **Crear datos para módulo Reportes** (OPCIONAL pero recomendado):
+   ```bash
+   sqlcmd -S "(localdb)\MSSQLLocalDB" -d ChetangoDB_Dev -i seed_reportes_datos_prueba.sql
+   ```
+
+5. **Verificar**: Probar login con cualquiera de los 3 usuarios en Postman o tu aplicación frontend.
+
+---
+
+## 🧪 Datos de Prueba Disponibles
+
+### Usuarios CIAM (seed_usuarios_prueba_ciam.sql):
+- **Admin**: `Chetango@chetangoprueba.onmicrosoft.com`
+- **Profesor**: `Jorgepadilla@chetangoprueba.onmicrosoft.com` 
+- **Alumno**: `JuanDavid@chetangoprueba.onmicrosoft.com`
+
+### Datos Reportes (seed_reportes_datos_prueba.sql):
+- 5 alumnos adicionales
+- 45 pagos (últimos 6 meses)
+- 12 paquetes (varios estados)
+- 40+ clases con asistencias
+- Datos para dashboard, gráficas y alertas
 
 ---
 

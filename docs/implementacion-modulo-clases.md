@@ -16,6 +16,7 @@
    - Validación de conflictos de horario
    - Validación de ownership (profesor solo crea para sí mismo)
    - Admin puede crear para cualquier profesor
+   - Soporte para múltiples profesores principales y monitores
    - Validaciones en el Handler (el proyecto no usa FluentValidation)
    
 2. ✅ **EditarClaseCommand**

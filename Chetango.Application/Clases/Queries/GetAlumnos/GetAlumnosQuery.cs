@@ -5,4 +5,4 @@ using MediatR;
 namespace Chetango.Application.Clases.Queries.GetAlumnos;
 
 // Query para obtener todos los alumnos
-public record GetAlumnosQuery() : IRequest<Result<List<AlumnoDTO>>>;
+public record GetAlumnosQuery(string? Filtro = null) : IRequest<Result<List<AlumnoDTO>>>;

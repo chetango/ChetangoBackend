@@ -14,15 +14,29 @@ public class GetAlumnosQueryHandler : IRequestHandler<GetAlumnosQuery, Result<Li
 
     public async Task<Result<List<AlumnoDTO>>> Handle(GetAlumnosQuery request, CancellationToken cancellationToken)
     {
-        var alumnos = await _db.Set<Alumno>()
+        var query = _db.Set<Alumno>()
             .Include(a => a.Usuario)
-            .AsNoTracking()
+            .AsNoTracking();
+
+        // Aplicar filtro si se proporciona
+        if (!string.IsNullOrWhiteSpace(request.Filtro))
+        {
+            var filtro = request.Filtro.ToLower();
+            query = query.Where(a => 
+                a.Usuario.NombreUsuario.ToLower().Contains(filtro) ||
+                a.Usuario.NumeroDocumento.Contains(filtro)
+            );
+        }
+
+        var alumnos = await query
             .OrderBy(a => a.Usuario.NombreUsuario)
             .Select(a => new AlumnoDTO(
                 a.IdAlumno,
                 a.IdUsuario,
                 a.Usuario.NombreUsuario,
-                a.Usuario.Correo
+                a.Usuario.Correo,
+                a.Usuario.NumeroDocumento,
+                a.Usuario.Telefono
             ))
             .ToListAsync(cancellationToken);
 

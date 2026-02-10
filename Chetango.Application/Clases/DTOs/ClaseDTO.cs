@@ -7,7 +7,9 @@ public record ClaseDTO(
     TimeSpan HoraInicio,
     TimeSpan HoraFin,
     string TipoClase,
-    Guid IdProfesorPrincipal,
+    Guid? IdProfesorPrincipal, // NULLABLE: Soporte para clases con múltiples profesores sin principal único
     string NombreProfesor,
-    int TotalAsistencias
+    int CupoMaximo,
+    int TotalAsistencias,
+    string Estado
 );

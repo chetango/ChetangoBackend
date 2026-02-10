@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Chetango.Infrastructure.Persistence;
+using Chetango.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using Chetango.Application.Clases.Queries.GetClasesDeAlumno;
+using Chetango.Application.Clases.Commands;
 using Chetango.Application.Clases.Commands.CrearClase;
 using Chetango.Application.Clases.Commands.EditarClase;
 using Chetango.Application.Clases.Commands.CancelarClase;
@@ -15,6 +17,8 @@ using Chetango.Application.Clases.Queries.GetTiposClase;
 using Chetango.Application.Clases.Queries.GetProfesores;
 using Chetango.Application.Clases.Queries.GetAlumnos;
 using Chetango.Application.Clases.DTOs;
+using Chetango.Application.Alumnos;
+using Chetango.Application.Profesores;
 using Chetango.Application.Paquetes.Commands.CrearPaquete;
 using Chetango.Application.Paquetes.Commands.EditarPaquete;
 using Chetango.Application.Paquetes.Commands.CongelarPaquete;
@@ -25,11 +29,16 @@ using Chetango.Application.Paquetes.Queries.GetPaquetes;
 using Chetango.Application.Paquetes.Queries.GetEstadisticasPaquetes;
 using Chetango.Application.Paquetes.Queries.GetTiposPaquete;
 using Chetango.Application.Paquetes.Queries.GetMisPaquetes;
+using Chetango.Application.Paquetes.Queries.GetPaquetesSinPago;
 using Chetango.Application.Paquetes.DTOs;
 using Chetango.Application.Asistencias.Commands.RegistrarAsistencia;
 using Chetango.Application.Asistencias.Commands.ActualizarEstadoAsistencia;
+using Chetango.Application.Asistencias.Commands.ConfirmarAsistencia;
 using Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase;
+using Chetango.Application.Asistencias.Queries.GetAsistenciasClaseConAlumnos;
 using Chetango.Application.Asistencias.Queries.GetAsistenciasPorAlumno;
+using Chetango.Application.Asistencias.Queries.GetAsistenciasPendientesConfirmar;
+using Chetango.Application.Asistencias.Queries.GetTiposAsistencia;
 using Chetango.Application.Asistencias.Admin.DTOs;
 using Chetango.Application.Asistencias.Admin.Queries.GetDiasConClasesAdmin;
 using Chetango.Application.Asistencias.Admin.Queries.GetClasesDelDiaAdmin;
@@ -37,20 +46,58 @@ using Chetango.Application.Asistencias.Admin.Queries.GetResumenAsistenciasClaseA
 using Chetango.Application.Pagos.Commands;
 using Chetango.Application.Pagos.Queries;
 using Chetango.Application.Pagos.DTOs;
+using Chetango.Application.Reportes.Queries;
+using Chetango.Application.Reportes.DTOs;
+using Chetango.Application.Reportes.Services;
+using Chetango.Application.Eventos.Commands;
+using Chetango.Application.Eventos.Queries;
+using Chetango.Application.Eventos.DTOs;
+using Chetango.Application.Perfil.Commands;
+using Chetango.Application.Perfil.Queries;
+using Chetango.Application.Perfil.DTOs;
+using Chetango.Application.Profesores.Commands;
+using Chetango.Application.Profesores.Queries;
+using Chetango.Application.Profesores.DTOs;
+using Chetango.Application.Usuarios.Queries;
+using Chetango.Application.Usuarios.Commands;
+using Chetango.Application.Usuarios.DTOs;
+using Chetango.Application.Nomina.Queries;
+using Chetango.Application.Nomina.Commands;
+using Chetango.Application.Nomina.DTOs;
+using Chetango.Application.Solicitudes.Commands.SolicitarRenovacionPaquete;
+using Chetango.Application.Solicitudes.Commands.SolicitarClasePrivada;
+using Chetango.Application.Solicitudes.Queries;
+using Chetango.Application.Solicitudes.DTOs;
+using Chetango.Application.Referidos.Commands;
+using Chetango.Application.Referidos.Queries;
+using Chetango.Application.Referidos.DTOs;
+using Chetango.Application.Admin.Queries;
+using Chetango.Application.Admin.Commands;
+using Chetango.Application.Admin.DTOs;
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
 using Chetango.Api.Infrastructure; // MigrationRunner
 using Microsoft.OpenApi.Models; // Swagger security
 using Microsoft.AspNetCore.Http;
+using System.Text.Json; // For JSON serializer configuration
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure JSON serialization options to be case-insensitive
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+});
 
 // Configuración de EF Core: registra el DbContext con la cadena de conexión de SQL Server
 builder.Services.AddDbContext<ChetangoDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ChetangoConnection")));
 // Mapear interfaz de Application al DbContext concreto
 builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<ChetangoDbContext>());
+
+// Registrar servicio de WhatsApp
+builder.Services.AddScoped<IWhatsAppService, TwilioWhatsAppService>();
 
 // CORS por entorno
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
@@ -219,6 +266,11 @@ var adminAuthPolicies = requiredRoles.Length > 0
 // Registro de MediatR compatible con v11
 builder.Services.AddMediatR(typeof(GetClasesDeAlumnoQuery).Assembly);
 
+// Registro de servicios de exportación de reportes
+builder.Services.AddScoped<ExcelExportService>();
+builder.Services.AddScoped<PdfExportService>();
+builder.Services.AddScoped<CsvExportService>();
+
 var app = builder.Build();
 
 // Apply EF migrations automatically per environment
@@ -257,6 +309,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Servir archivos estáticos (imágenes, comprobantes, avatares, etc.)
+app.UseStaticFiles();
+
 app.UseCors("DefaultCors");
 app.UseAuthentication(); // Debe ir antes de Authorization
 app.UseAuthorization();
@@ -364,13 +420,26 @@ app.MapGet("/api/auth/me", async (
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToList();
 
+    // Obtener idProfesor e idAlumno si existen
+    var idProfesor = await db.Profesores
+        .Where(p => p.IdUsuario == usuario.IdUsuario)
+        .Select(p => p.IdProfesor)
+        .FirstOrDefaultAsync();
+    
+    var idAlumno = await db.Alumnos
+        .Where(a => a.IdUsuario == usuario.IdUsuario)
+        .Select(a => a.IdAlumno)
+        .FirstOrDefaultAsync();
+
     return Results.Ok(new
     {
         idUsuario = usuario.IdUsuario,
         nombre = usuario.NombreUsuario,
         correo = usuario.Correo,
         telefono = usuario.Telefono,
-        roles = roles
+        roles = roles,
+        idProfesor = idProfesor == Guid.Empty ? (Guid?)null : idProfesor,
+        idAlumno = idAlumno == Guid.Empty ? (Guid?)null : idAlumno
     });
 }).RequireAuthorization("ApiScope");
 
@@ -391,6 +460,8 @@ app.MapGet("/api/alumnos/{idAlumno:guid}/clases", async (
              ?? user.FindFirst("preferred_username")?.Value
              ?? user.FindFirst("upn")?.Value
              ?? user.FindFirst("emails")?.Value;
+    
+    email = string.IsNullOrWhiteSpace(email) ? email : email.Trim();
 
     var isAdmin = user.FindAll(ClaimTypes.Role)
         .Select(c => c.Value)
@@ -439,12 +510,40 @@ app.MapGet("/api/profesores", async (IMediator mediator) =>
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
+// GET /api/profesores/{idProfesor}/quick-view - Obtener información rápida de profesor (Admin)
+app.MapGet("/api/profesores/{idProfesor:guid}/quick-view", async (Guid idProfesor, IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetProfesorQuickViewQuery(idProfesor));
+    return result.Succeeded ? Results.Ok(result.Value) : Results.NotFound(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/profesores/{idProfesor}/detail - Obtener detalle completo de profesor (Admin)
+app.MapGet("/api/profesores/{idProfesor:guid}/detail", async (Guid idProfesor, IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetProfesorDetailQuery(idProfesor));
+    return result.Succeeded ? Results.Ok(result.Value) : Results.NotFound(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
 // GET /api/alumnos - Obtener todos los alumnos (Admin y Profesores)
 app.MapGet("/api/alumnos", async (IMediator mediator) =>
 {
     var result = await mediator.Send(new GetAlumnosQuery());
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOrProfesor");
+
+// GET /api/alumnos/{idAlumno}/quick-view - Obtener información rápida de alumno (Admin)
+app.MapGet("/api/alumnos/{idAlumno:guid}/quick-view", async (Guid idAlumno, IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetAlumnoQuickViewQuery(idAlumno));
+    return result.Succeeded ? Results.Ok(result.Value) : Results.NotFound(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/alumnos/{idAlumno}/detail - Obtener detalle completo de alumno (Admin)
+app.MapGet("/api/alumnos/{idAlumno:guid}/detail", async (Guid idAlumno, IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetAlumnoDetailQuery(idAlumno));
+    return result.Succeeded ? Results.Ok(result.Value) : Results.NotFound(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
 
 // ====== ENDPOINTS DE PAQUETES ======
 
@@ -613,6 +712,17 @@ app.MapPost("/api/paquetes/{id:guid}/descongelar", async (
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
+// GET /api/alumnos/{idAlumno}/paquetes-sin-pago - Obtener paquetes del alumno que no tienen pago asociado (AdminOnly)
+app.MapGet("/api/alumnos/{idAlumno:guid}/paquetes-sin-pago", async (
+    Guid idAlumno,
+    IMediator mediator) =>
+{
+    var paquetes = await mediator.Send(new GetPaquetesSinPagoQuery(idAlumno));
+    return paquetes.Succeeded 
+        ? Results.Ok(paquetes.Value) 
+        : Results.BadRequest(new { error = paquetes.Error });
+}).RequireAuthorization("AdminOnly");
+
 // GET /api/alumnos/{idAlumno}/paquetes - Listar paquetes de un alumno (ApiScope con ownership)
 app.MapGet("/api/alumnos/{idAlumno:guid}/paquetes", async (
     Guid idAlumno,
@@ -667,14 +777,19 @@ app.MapPost("/api/clases", async (
     var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
                               || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
 
+    // Convertir ProfesorClaseRequestDTO a ProfesorClaseRequest (del command)
+    var profesoresCommand = dto.Profesores?.Select(p => new ProfesorClaseRequest(p.IdProfesor, p.RolEnClase)).ToList();
+
     var command = new CrearClaseCommand(
-        IdProfesorPrincipal: dto.IdProfesorPrincipal,
+        Profesores: profesoresCommand ?? new List<ProfesorClaseRequest>(),
         IdTipoClase: dto.IdTipoClase,
         Fecha: dto.Fecha,
         HoraInicio: dto.HoraInicio,
         HoraFin: dto.HoraFin,
         CupoMaximo: dto.CupoMaximo,
         Observaciones: dto.Observaciones,
+        IdProfesorPrincipal: dto.IdProfesorPrincipal,
+        IdsMonitores: dto.IdsMonitores,
         IdUsuarioActual: oidClaim,
         EsAdmin: esAdmin
     );
@@ -715,6 +830,19 @@ app.MapPut("/api/clases/{id:guid}", async (
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOrProfesor");
 
+// POST /api/clases/{id}/completar - Completar clase y generar pagos (Solo Admin)
+app.MapPost("/api/clases/{id:guid}/completar", async (
+    Guid id,
+    IMediator mediator) =>
+{
+    var command = new CompletarClaseCommand(IdClase: id);
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded 
+        ? Results.Ok(new { mensaje = "Clase completada y pagos generados exitosamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
 // DELETE /api/clases/{id} - Cancelar una clase (Admin o Profesor dueño)
 app.MapDelete("/api/clases/{id:guid}", async (
     Guid id,
@@ -742,16 +870,38 @@ app.MapDelete("/api/clases/{id:guid}", async (
 app.MapGet("/api/clases/{id:guid}", async (
     Guid id,
     IMediator mediator,
-    ClaimsPrincipal user) =>
+    ClaimsPrincipal user,
+    ChetangoDbContext db) =>
 {
-    var oidClaim = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    // Obtener roles
     var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
     var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
                               || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
 
+    // Obtener IdUsuario del profesor por correo (como en otros endpoints)
+    string? idUsuarioActual = null;
+    if (!esAdmin)
+    {
+        var email = user.FindFirst(ClaimTypes.Email)?.Value
+                 ?? user.FindFirst("preferred_username")?.Value
+                 ?? user.FindFirst("upn")?.Value
+                 ?? user.FindFirst("emails")?.Value;
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var profesor = await db.Profesores
+                .AsNoTracking()
+                .Where(p => p.Usuario.Correo == email)
+                .Select(p => p.IdUsuario)
+                .FirstOrDefaultAsync();
+
+            idUsuarioActual = profesor.ToString();
+        }
+    }
+
     var query = new GetClaseByIdQuery(
         IdClase: id,
-        IdUsuarioActual: oidClaim,
+        IdUsuarioActual: idUsuarioActual,
         EsAdmin: esAdmin
     );
 
@@ -769,12 +919,33 @@ app.MapGet("/api/profesores/{idProfesor:guid}/clases", async (
     int pageNumber = 1,
     int pageSize = 10,
     IMediator mediator = null!,
-    ClaimsPrincipal user = null!) =>
+    ClaimsPrincipal user = null!,
+    ChetangoDbContext db = null!) =>
 {
-    var oidClaim = user.FindFirst("oid")?.Value ?? user.FindFirst("sub")?.Value;
+    // Validar que el profesor existe
+    var profesor = await db.Profesores
+        .Include(p => p.Usuario)
+        .FirstOrDefaultAsync(p => p.IdProfesor == idProfesor);
+    
+    if (profesor is null)
+        return Results.NotFound(new { error = "Profesor no encontrado" });
+
+    // Validar ownership por correo (igual que el dashboard)
+    var emailClaim = user.FindFirst(ClaimTypes.Email)?.Value
+        ?? user.FindFirst("preferred_username")?.Value
+        ?? user.FindFirst("upn")?.Value;
+    
     var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
     var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
                               || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
+
+    // Si no es admin, verificar que el correo coincida con el del profesor
+    if (!esAdmin)
+    {
+        if (string.IsNullOrWhiteSpace(emailClaim) || 
+            !string.Equals(profesor.Usuario.Correo, emailClaim, StringComparison.OrdinalIgnoreCase))
+            return Results.Forbid();
+    }
 
     var query = new GetClasesDeProfesorQuery(
         IdProfesor: idProfesor,
@@ -782,7 +953,7 @@ app.MapGet("/api/profesores/{idProfesor:guid}/clases", async (
         FechaHasta: fechaHasta,
         PageNumber: pageNumber,
         PageSize: pageSize,
-        IdUsuarioActual: oidClaim,
+        IdUsuarioActual: null,
         EsAdmin: esAdmin
     );
 
@@ -793,6 +964,14 @@ app.MapGet("/api/profesores/{idProfesor:guid}/clases", async (
 }).RequireAuthorization("AdminOrProfesor");
 
 // ====== ENDPOINTS DE ASISTENCIAS ======
+
+// GET /api/asistencias/tipos - Obtener catálogo de tipos de asistencia (protegido)
+app.MapGet("/api/asistencias/tipos", async (IMediator mediator) =>
+{
+    var query = new GetTiposAsistenciaQuery();
+    var result = await mediator.Send(query);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+}).RequireAuthorization("AdminOrProfesor");
 
 // POST /api/asistencias - Registrar asistencia (protegido)
 app.MapPost("/api/asistencias", async (
@@ -831,7 +1010,7 @@ app.MapGet("/api/clases/{idClase:guid}/asistencias", async (
     if (roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase)))
     {
-        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
+        var query = new GetAsistenciasClaseConAlumnosQuery(idClase);
         var result = await mediator.Send(query);
         return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
     }
@@ -843,18 +1022,18 @@ app.MapGet("/api/clases/{idClase:guid}/asistencias", async (
         if (string.IsNullOrWhiteSpace(email))
             return Results.Unauthorized();
 
-        // Verificar que la clase pertenece al profesor autenticado
-        var esProfesorDeClase = await db.Clases
+        // Verificar que el profesor está asignado a la clase (Principal o Monitor)
+        var esProfesorDeClase = await db.ClasesProfesores
             .AsNoTracking()
-            .Include(c => c.ProfesorPrincipal)
+            .Include(cp => cp.Profesor)
             .ThenInclude(p => p.Usuario)
-            .Where(c => c.IdClase == idClase && c.ProfesorPrincipal.Usuario.Correo == email)
+            .Where(cp => cp.IdClase == idClase && cp.Profesor.Usuario.Correo == email)
             .AnyAsync();
 
         if (!esProfesorDeClase)
-            return Results.Forbid(); // 403: El profesor no imparte esta clase
+            return Results.Forbid(); // 403: El profesor no está asignado a esta clase
 
-        var query = new Chetango.Application.Asistencias.Queries.GetAsistenciasPorClase.GetAsistenciasPorClaseQuery(idClase);
+        var query = new GetAsistenciasClaseConAlumnosQuery(idClase);
         var result = await mediator.Send(query);
         return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
     }
@@ -901,6 +1080,70 @@ app.MapGet("/api/alumnos/{idAlumno:guid}/asistencias", async (
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
 }).RequireAuthorization("ApiScope");
 
+// GET /api/alumnos/me/asistencias/pendientes - Obtener asistencias pendientes de confirmar (ApiScope, alumno autenticado)
+app.MapGet("/api/alumnos/me/asistencias/pendientes", async (
+    IMediator mediator,
+    ClaimsPrincipal user,
+    ChetangoDbContext db) =>
+{
+    // Obtener email del usuario autenticado
+    var email = user.FindFirst(ClaimTypes.Email)?.Value
+             ?? user.FindFirst("preferred_username")?.Value
+             ?? user.FindFirst("upn")?.Value
+             ?? user.FindFirst("emails")?.Value;
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Unauthorized();
+
+    // Obtener IdAlumno por correo
+    var alumno = await db.Alumnos
+        .AsNoTracking()
+        .Where(a => a.Usuario.Correo == email)
+        .Select(a => new { a.IdAlumno })
+        .FirstOrDefaultAsync();
+
+    if (alumno == null)
+        return Results.NotFound("Alumno no encontrado");
+
+    var query = new GetAsistenciasPendientesConfirmarQuery(alumno.IdAlumno);
+    var result = await mediator.Send(query);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+}).RequireAuthorization("ApiScope");
+
+// POST /api/alumnos/asistencias/{idAsistencia}/confirmar - Confirmar asistencia (ApiScope, alumno owner)
+app.MapPost("/api/alumnos/asistencias/{idAsistencia:guid}/confirmar", async (
+    Guid idAsistencia,
+    IMediator mediator,
+    ClaimsPrincipal user,
+    ChetangoDbContext db) =>
+{
+    // Obtener email del usuario autenticado
+    var email = user.FindFirst(ClaimTypes.Email)?.Value
+             ?? user.FindFirst("preferred_username")?.Value
+             ?? user.FindFirst("upn")?.Value
+             ?? user.FindFirst("emails")?.Value;
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Unauthorized();
+
+    // Verificar que la asistencia pertenece al alumno autenticado
+    var asistencia = await db.Asistencias
+        .AsNoTracking()
+        .Where(a => a.IdAsistencia == idAsistencia)
+        .Select(a => new { a.Alumno.Usuario.Correo })
+        .FirstOrDefaultAsync();
+
+    if (asistencia == null)
+        return Results.NotFound("Asistencia no encontrada");
+
+    if (!string.Equals(asistencia.Correo, email, StringComparison.OrdinalIgnoreCase))
+        return Results.Forbid();
+
+    var command = new ConfirmarAsistenciaCommand(idAsistencia);
+    var result = await mediator.Send(command);
+    return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+}).RequireAuthorization("ApiScope");
+
 // ====== ENDPOINTS DE PAGOS ======
 
 // GET /api/pagos/metodos-pago - Obtener catálogo de métodos de pago (ApiScope)
@@ -923,6 +1166,48 @@ app.MapGet("/api/pagos/estadisticas", async (
     var result = await mediator.Send(query);
     return result.Succeeded 
         ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/pagos/pendientes - Pagos pendientes de verificación (AdminOnly)
+app.MapGet("/api/pagos/pendientes", async (
+    int pageNumber = 1,
+    int pageSize = 50,
+    IMediator mediator = null!) =>
+{
+    var query = new GetPagosPorEstadoQuery("Pendiente Verificación", null, null, pageNumber, pageSize);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value.Items) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/pagos/verificados-hoy - Pagos verificados hoy (AdminOnly)
+app.MapGet("/api/pagos/verificados-hoy", async (
+    int pageNumber = 1,
+    int pageSize = 50,
+    IMediator mediator = null!) =>
+{
+    var hoy = DateTime.Today;
+    var query = new GetPagosPorEstadoQuery("Verificado", hoy, hoy.AddDays(1).AddTicks(-1), pageNumber, pageSize);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value.Items) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/pagos/verificados - Todos los pagos verificados (AdminOnly)
+app.MapGet("/api/pagos/verificados", async (
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    int pageNumber = 1,
+    int pageSize = 50,
+    IMediator mediator = null!) =>
+{
+    var query = new GetPagosPorEstadoQuery("Verificado", fechaDesde, fechaHasta, pageNumber, pageSize);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value.Items) 
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
@@ -1022,8 +1307,11 @@ app.MapPost("/api/pagos", async (
         dto.FechaPago,
         dto.MontoTotal,
         dto.IdMetodoPago,
+        dto.ReferenciaTransferencia,
+        dto.UrlComprobante,
         dto.Nota,
-        dto.Paquetes
+        dto.Paquetes,
+        dto.IdsPaquetesExistentes
     );
 
     var result = await mediator.Send(command);
@@ -1048,6 +1336,1606 @@ app.MapPut("/api/pagos/{id:guid}", async (
     var result = await mediator.Send(command);
     return result.Succeeded 
         ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/pagos/{id}/verificar - Verificar o rechazar pago (AdminOnly)
+app.MapPost("/api/pagos/{id:guid}/verificar", async (
+    Guid id,
+    VerificarPagoRequestDTO dto,
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var aprobar = dto.Accion.ToLower() == "aprobar";
+    
+    var command = new VerificarPagoCommand(
+        id,
+        aprobar,
+        dto.Nota,
+        dto.NotificarAlumno,
+        emailClaim
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(new { success = true }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ENDPOINTS DE REPORTES - Módulo de solo lectura (queries únicamente)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// GET /api/reportes/asistencias - Reporte de asistencias (AdminOrProfesor)
+app.MapGet("/api/reportes/asistencias", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    DateTime fechaDesde,
+    DateTime fechaHasta,
+    Guid? idClase = null,
+    Guid? idAlumno = null,
+    Guid? idProfesor = null,
+    string? estadoAsistencia = null) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var esAdmin = httpContext.User.HasClaim(ClaimTypes.Role, "admin");
+    var esProfesor = httpContext.User.HasClaim(ClaimTypes.Role, "profesor");
+
+    var query = new GetReporteAsistenciasQuery
+    {
+        FechaDesde = fechaDesde,
+        FechaHasta = fechaHasta,
+        IdClase = idClase,
+        IdAlumno = idAlumno,
+        IdProfesor = idProfesor,
+        EstadoAsistencia = estadoAsistencia,
+        EmailUsuario = emailClaim,
+        EsAdmin = esAdmin,
+        EsProfesor = esProfesor
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// GET /api/reportes/ingresos - Reporte de ingresos (AdminOnly)
+app.MapGet("/api/reportes/ingresos", async (
+    IMediator mediator,
+    DateTime fechaDesde,
+    DateTime fechaHasta,
+    Guid? idMetodoPago = null,
+    bool comparativa = false) =>
+{
+    var query = new GetReporteIngresosQuery
+    {
+        FechaDesde = fechaDesde,
+        FechaHasta = fechaHasta,
+        IdMetodoPago = idMetodoPago,
+        ComparativaMesAnterior = comparativa
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/reportes/paquetes - Reporte de paquetes (AdminOnly)
+app.MapGet("/api/reportes/paquetes", async (
+    IMediator mediator,
+    DateTime fechaDesde,
+    DateTime fechaHasta,
+    string? estado = null,
+    Guid? idTipoPaquete = null) =>
+{
+    var query = new GetReportePaquetesQuery
+    {
+        FechaDesde = fechaDesde,
+        FechaHasta = fechaHasta,
+        Estado = estado,
+        IdTipoPaquete = idTipoPaquete
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/reportes/clases - Reporte de clases (AdminOrProfesor)
+app.MapGet("/api/reportes/clases", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    DateTime fechaDesde,
+    DateTime fechaHasta,
+    Guid? idTipoClase = null,
+    Guid? idProfesor = null) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var esAdmin = httpContext.User.HasClaim(ClaimTypes.Role, "admin");
+    var esProfesor = httpContext.User.HasClaim(ClaimTypes.Role, "profesor");
+
+    var query = new GetReporteClasesQuery
+    {
+        FechaDesde = fechaDesde,
+        FechaHasta = fechaHasta,
+        IdTipoClase = idTipoClase,
+        IdProfesor = idProfesor,
+        EmailUsuario = emailClaim,
+        EsAdmin = esAdmin,
+        EsProfesor = esProfesor
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// GET /api/reportes/alumnos - Reporte de alumnos (AdminOnly)
+app.MapGet("/api/reportes/alumnos", async (
+    IMediator mediator,
+    DateTime? fechaInscripcionDesde = null,
+    DateTime? fechaInscripcionHasta = null,
+    string? estado = null) =>
+{
+    var query = new GetReporteAlumnosQuery
+    {
+        FechaInscripcionDesde = fechaInscripcionDesde,
+        FechaInscripcionHasta = fechaInscripcionHasta,
+        Estado = estado
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/reportes/dashboard - Dashboard general (AdminOnly)
+app.MapGet("/api/reportes/dashboard", async (
+    IMediator mediator,
+    DateTime? fechaDesde = null,
+    DateTime? fechaHasta = null,
+    string? periodo = null) =>
+{
+    var query = new GetDashboardQuery
+    {
+        FechaDesde = fechaDesde,
+        FechaHasta = fechaHasta,
+        PeriodoPreset = periodo
+    };
+    
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/reportes/mi-reporte - Mi reporte (alumno autenticado) (ApiScope)
+app.MapGet("/api/reportes/mi-reporte", async (
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetMiReporteQuery
+    {
+        EmailUsuario = emailClaim
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/reportes/mis-clases - Mis clases reporte (profesor autenticado) (ApiScope)
+app.MapGet("/api/reportes/mis-clases", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    DateTime fechaDesde,
+    DateTime fechaHasta) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetMisClasesReporteQuery
+    {
+        FechaDesde = fechaDesde,
+        FechaHasta = fechaHasta,
+        EmailUsuario = emailClaim
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/reportes/dashboard/profesor - Dashboard profesor (ApiScope)
+app.MapGet("/api/reportes/dashboard/profesor", async (
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetDashboardProfesorQuery
+    {
+        EmailUsuario = emailClaim
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/reportes/dashboard/alumno - Dashboard alumno (ApiScope)
+app.MapGet("/api/reportes/dashboard/alumno", async (
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetDashboardAlumnoQuery
+    {
+        EmailUsuario = emailClaim
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// ==========================================
+// ENDPOINTS DE PERFIL PROFESOR
+// ==========================================
+
+// GET /api/profesores/me/perfil - Obtener perfil del profesor autenticado (ApiScope)
+app.MapGet("/api/profesores/me/perfil", async (
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetPerfilProfesorQuery(emailClaim);
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// PUT /api/profesores/me/perfil - Actualizar datos personales del profesor (ApiScope)
+app.MapPut("/api/profesores/me/perfil", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdateDatosPersonalesProfesorDTO dto) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .FirstOrDefaultAsync(u => u.Correo == emailClaim);
+
+    if (usuario == null)
+        return Results.NotFound(new { error = "Usuario no encontrado" });
+
+    var profesor = await db.Profesores
+        .FirstOrDefaultAsync(p => p.IdUsuario == usuario.IdUsuario);
+
+    if (profesor == null)
+        return Results.NotFound(new { error = "Perfil de profesor no encontrado" });
+
+    var command = new UpdateDatosPersonalesProfesorCommand(
+        profesor.IdProfesor,
+        dto.NombreCompleto,
+        dto.Telefono
+    );
+    
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded
+        ? Results.Ok(new { message = "Datos personales actualizados correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// PUT /api/profesores/me/perfil-profesional - Actualizar perfil profesional (AdminOrProfesor)
+app.MapPut("/api/profesores/me/perfil-profesional", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdatePerfilProfesionalDTO dto) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .FirstOrDefaultAsync(u => u.Correo == emailClaim);
+
+    if (usuario == null)
+        return Results.NotFound(new { error = "Usuario no encontrado" });
+
+    var profesor = await db.Profesores
+        .FirstOrDefaultAsync(p => p.IdUsuario == usuario.IdUsuario);
+
+    if (profesor == null)
+        return Results.NotFound(new { error = "Perfil de profesor no encontrado" });
+
+    var command = new UpdatePerfilProfesionalCommand(
+        profesor.IdProfesor,
+        dto.Biografia,
+        dto.Especialidades
+    );
+    
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded
+        ? Results.Ok(new { message = "Perfil profesional actualizado correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// PUT /api/profesores/me/configuracion - Actualizar configuración de notificaciones (AdminOrProfesor)
+app.MapPut("/api/profesores/me/configuracion", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdateConfiguracionProfesorDTO dto) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .FirstOrDefaultAsync(u => u.Correo == emailClaim);
+
+    if (usuario == null)
+        return Results.NotFound(new { error = "Usuario no encontrado" });
+
+    var profesor = await db.Profesores
+        .FirstOrDefaultAsync(p => p.IdUsuario == usuario.IdUsuario);
+
+    if (profesor == null)
+        return Results.NotFound(new { error = "Perfil de profesor no encontrado" });
+
+    var command = new UpdateConfiguracionProfesorCommand(
+        profesor.IdProfesor,
+        dto.NotificacionesEmail,
+        dto.RecordatoriosClase,
+        dto.AlertasCambios
+    );
+    
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded
+        ? Results.Ok(new { message = "Configuración actualizada correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOrProfesor");
+
+// ==========================================
+// ENDPOINTS DE EVENTOS
+// ==========================================
+
+// GET /api/eventos - Listar todos los eventos (ApiScope)
+app.MapGet("/api/eventos", async (
+    IMediator mediator,
+    bool? soloActivos,
+    bool? soloFuturos) =>
+{
+    var query = new GetAllEventosQuery
+    {
+        SoloActivos = soloActivos,
+        SoloFuturos = soloFuturos
+    };
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/eventos/{id} - Obtener evento por ID (ApiScope)
+app.MapGet("/api/eventos/{id:guid}", async (
+    Guid id,
+    IMediator mediator) =>
+{
+    var query = new GetEventoByIdQuery { IdEvento = id };
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.NotFound(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// POST /api/eventos - Crear nuevo evento (Admin)
+app.MapPost("/api/eventos", async (
+    CreateEventoDto dto,
+    HttpContext httpContext,
+    IMediator mediator,
+    ChetangoDbContext db) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    // Obtener ID del usuario
+    var usuario = await db.Usuarios
+        .FirstOrDefaultAsync(u => u.Correo == emailClaim);
+
+    if (usuario == null)
+        return Results.Unauthorized();
+
+    var command = new CreateEventoCommand
+    {
+        Titulo = dto.Titulo,
+        Descripcion = dto.Descripcion,
+        Fecha = dto.Fecha,
+        Hora = dto.Hora,
+        Precio = dto.Precio,
+        Destacado = dto.Destacado,
+        ImagenUrl = dto.ImagenUrl,
+        IdUsuarioCreador = usuario.IdUsuario
+    };
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Created($"/api/eventos/{result.Value!.IdEvento}", result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("Admin");
+
+// PUT /api/eventos/{id} - Actualizar evento (Admin)
+app.MapPut("/api/eventos/{id:guid}", async (
+    Guid id,
+    UpdateEventoDto dto,
+    IMediator mediator) =>
+{
+    var command = new UpdateEventoCommand
+    {
+        IdEvento = id,
+        Titulo = dto.Titulo,
+        Descripcion = dto.Descripcion,
+        Fecha = dto.Fecha,
+        Hora = dto.Hora,
+        Precio = dto.Precio,
+        Destacado = dto.Destacado,
+        ImagenUrl = dto.ImagenUrl,
+        Activo = dto.Activo
+    };
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("Admin");
+
+// DELETE /api/eventos/{id} - Eliminar evento (Admin)
+app.MapDelete("/api/eventos/{id:guid}", async (
+    Guid id,
+    IMediator mediator) =>
+{
+    var command = new DeleteEventoCommand { IdEvento = id };
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(new { message = "Evento eliminado correctamente" }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("Admin");
+
+// POST /api/eventos/upload-imagen - Subir imagen para evento (Admin)
+app.MapPost("/api/eventos/upload-imagen", async (
+    HttpRequest request,
+    IWebHostEnvironment env) =>
+{
+    if (!request.HasFormContentType || !request.Form.Files.Any())
+        return Results.BadRequest(new { error = "No se ha enviado ningún archivo" });
+
+    var file = request.Form.Files[0];
+
+    // Validar extensión
+    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+    if (!allowedExtensions.Contains(extension))
+        return Results.BadRequest(new { error = "Formato de imagen no válido. Use jpg, jpeg, png o webp" });
+
+    // Validar tamaño (máximo 5MB)
+    if (file.Length > 5 * 1024 * 1024)
+        return Results.BadRequest(new { error = "La imagen no puede superar 5MB" });
+
+    // Crear directorio si no existe
+    var uploadsPath = Path.Combine(env.WebRootPath, "uploads", "eventos");
+    Directory.CreateDirectory(uploadsPath);
+
+    // Generar nombre único
+    var fileName = $"{Guid.NewGuid()}{extension}";
+    var filePath = Path.Combine(uploadsPath, fileName);
+
+    // Guardar archivo
+    using (var stream = new FileStream(filePath, FileMode.Create))
+    {
+        await file.CopyToAsync(stream);
+    }
+
+    // Retornar URL relativa
+    var imageUrl = $"/uploads/eventos/{fileName}";
+    return Results.Ok(new { url = imageUrl, nombre = fileName });
+}).RequireAuthorization("Admin");
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ENDPOINTS DE SOLICITUDES - Renovación Paquetes y Clases Privadas
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// POST /api/solicitudes/renovar-paquete - Alumno solicita renovación (ApiScope)
+app.MapPost("/api/solicitudes/renovar-paquete", async (
+    HttpContext httpContext,
+    SolicitarRenovacionPaqueteCommand command,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    // Actualizar el command con el email del usuario autenticado
+    var commandWithEmail = new SolicitarRenovacionPaqueteCommand(
+        emailClaim,
+        command.IdTipoPaqueteDeseado,
+        command.MensajeAlumno
+    );
+
+    var result = await mediator.Send(commandWithEmail);
+    return result.Succeeded 
+        ? Results.Created($"/api/solicitudes/renovacion/{result.Value}", new { idSolicitud = result.Value }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// POST /api/solicitudes/clase-privada - Alumno solicita clase privada (ApiScope)
+app.MapPost("/api/solicitudes/clase-privada", async (
+    HttpContext httpContext,
+    SolicitarClasePrivadaCommand command,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    // Actualizar el command con el email del usuario autenticado
+    var commandWithEmail = new SolicitarClasePrivadaCommand(
+        emailClaim,
+        command.IdTipoClaseDeseado,
+        command.FechaPreferida,
+        command.HoraPreferida,
+        command.ObservacionesAlumno
+    );
+
+    var result = await mediator.Send(commandWithEmail);
+    return result.Succeeded 
+        ? Results.Created($"/api/solicitudes/clase-privada/{result.Value}", new { idSolicitud = result.Value }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/solicitudes/renovacion-paquete/pendientes - Admin ve solicitudes pendientes (AdminOnly)
+app.MapGet("/api/solicitudes/renovacion-paquete/pendientes", async (
+    IMediator mediator) =>
+{
+    var query = new GetSolicitudesRenovacionPendientesQuery();
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/solicitudes/clase-privada/pendientes - Admin ve solicitudes pendientes (AdminOnly)
+app.MapGet("/api/solicitudes/clase-privada/pendientes", async (
+    IMediator mediator) =>
+{
+    var query = new GetSolicitudesClasePrivadaPendientesQuery();
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ENDPOINTS DE REFERIDOS - Programa "Invita un Amigo"
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// GET /api/referidos/mi-codigo - Obtener código de referido del alumno (ApiScope)
+app.MapGet("/api/referidos/mi-codigo", async (
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetMiCodigoReferidoQuery(emailClaim);
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// POST /api/referidos/generar-codigo - Generar código de referido (ApiScope)
+app.MapPost("/api/referidos/generar-codigo", async (
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var command = new GenerarCodigoReferidoCommand(emailClaim);
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded 
+        ? Results.Created("/api/referidos/mi-codigo", result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// POST /api/pagos/upload-comprobante - Subir comprobante de pago (Admin)
+app.MapPost("/api/pagos/upload-comprobante", async (
+    HttpRequest request,
+    IWebHostEnvironment env) =>
+{
+    if (!request.HasFormContentType || !request.Form.Files.Any())
+        return Results.BadRequest(new { error = "No se ha enviado ningún archivo" });
+
+    var file = request.Form.Files[0];
+
+    // Validar extensión
+    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
+    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+    if (!allowedExtensions.Contains(extension))
+        return Results.BadRequest(new { error = "Formato no válido. Use jpg, jpeg, png, webp o pdf" });
+
+    // Validar tamaño (máximo 10MB)
+    if (file.Length > 10 * 1024 * 1024)
+        return Results.BadRequest(new { error = "El archivo no puede superar 10MB" });
+
+    // Crear directorio si no existe
+    var uploadsPath = Path.Combine(env.WebRootPath, "uploads", "comprobantes");
+    Directory.CreateDirectory(uploadsPath);
+
+    // Generar nombre único
+    var fileName = $"{Guid.NewGuid()}{extension}";
+    var filePath = Path.Combine(uploadsPath, fileName);
+
+    // Guardar archivo
+    using (var stream = new FileStream(filePath, FileMode.Create))
+    {
+        await file.CopyToAsync(stream);
+    }
+
+    // Retornar URL relativa
+    var comprobanteUrl = $"/uploads/comprobantes/{fileName}";
+    return Results.Ok(new { url = comprobanteUrl, nombre = fileName });
+}).RequireAuthorization("AdminOnly");
+
+// ============================================
+// PERFIL ALUMNO ENDPOINTS
+// ============================================
+
+// GET /api/alumnos/me/perfil - Obtener perfil del alumno autenticado (ApiScope)
+app.MapGet("/api/alumnos/me/perfil", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db) =>
+{
+    var userEmail = httpContext.User.FindFirst("preferred_username")?.Value
+                    ?? httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .Include(u => u.Alumnos)
+        .FirstOrDefaultAsync(u => u.Correo == userEmail);
+
+    if (usuario?.Alumnos.FirstOrDefault() == null)
+        return Results.NotFound(new { error = "Perfil de alumno no encontrado" });
+
+    var idAlumno = usuario.Alumnos.First().IdAlumno;
+    var result = await mediator.Send(new GetPerfilAlumnoQuery(idAlumno));
+
+    return result.Succeeded
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// PUT /api/alumnos/me/perfil - Actualizar datos personales (ApiScope)
+app.MapPut("/api/alumnos/me/perfil", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdateDatosPersonalesDto dto) =>
+{
+    var userEmail = httpContext.User.FindFirst("preferred_username")?.Value
+                    ?? httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .Include(u => u.Alumnos)
+        .FirstOrDefaultAsync(u => u.Correo == userEmail);
+
+    if (usuario?.Alumnos.FirstOrDefault() == null)
+        return Results.NotFound(new { error = "Perfil de alumno no encontrado" });
+
+    var idAlumno = usuario.Alumnos.First().IdAlumno;
+    var command = new UpdateDatosPersonalesCommand(idAlumno, dto.NombreCompleto, dto.Telefono);
+    var result = await mediator.Send(command);
+
+    return result.Succeeded
+        ? Results.Ok(new { message = "Datos personales actualizados correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// PUT /api/alumnos/me/contacto-emergencia - Actualizar contacto de emergencia (ApiScope)
+app.MapPut("/api/alumnos/me/contacto-emergencia", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdateContactoEmergenciaDto dto) =>
+{
+    var userEmail = httpContext.User.FindFirst("preferred_username")?.Value
+                    ?? httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .Include(u => u.Alumnos)
+        .FirstOrDefaultAsync(u => u.Correo == userEmail);
+
+    if (usuario?.Alumnos.FirstOrDefault() == null)
+        return Results.NotFound(new { error = "Perfil de alumno no encontrado" });
+
+    var idAlumno = usuario.Alumnos.First().IdAlumno;
+    var command = new UpdateContactoEmergenciaCommand(idAlumno, dto.NombreCompleto, dto.Telefono, dto.Relacion);
+    var result = await mediator.Send(command);
+
+    return result.Succeeded
+        ? Results.Ok(new { message = "Contacto de emergencia actualizado correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// PUT /api/alumnos/me/configuracion - Actualizar configuración de notificaciones (ApiScope)
+app.MapPut("/api/alumnos/me/configuracion", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdateConfiguracionDto dto) =>
+{
+    var userEmail = httpContext.User.FindFirst("preferred_username")?.Value
+                    ?? httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .Include(u => u.Alumnos)
+        .FirstOrDefaultAsync(u => u.Correo == userEmail);
+
+    if (usuario?.Alumnos.FirstOrDefault() == null)
+        return Results.NotFound(new { error = "Perfil de alumno no encontrado" });
+
+    var idAlumno = usuario.Alumnos.First().IdAlumno;
+    var command = new UpdateConfiguracionCommand(idAlumno, dto.NotificacionesEmail, dto.RecordatoriosClase, dto.AlertasPaquete);
+    var result = await mediator.Send(command);
+
+    return result.Succeeded
+        ? Results.Ok(new { message = "Configuración actualizada correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// GET /api/alumnos/me/paquetes/historial - Obtener historial de paquetes (ApiScope)
+app.MapGet("/api/alumnos/me/paquetes/historial", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db) =>
+{
+    var userEmail = httpContext.User.FindFirst("preferred_username")?.Value
+                    ?? httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .Include(u => u.Alumnos)
+        .FirstOrDefaultAsync(u => u.Correo == userEmail);
+
+    if (usuario?.Alumnos.FirstOrDefault() == null)
+        return Results.NotFound(new { error = "Perfil de alumno no encontrado" });
+
+    var idAlumno = usuario.Alumnos.First().IdAlumno;
+    var result = await mediator.Send(new GetPaquetesHistorialQuery(idAlumno));
+
+    return result.Succeeded
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// POST /api/alumnos/me/avatar - Subir avatar del alumno (ApiScope)
+app.MapPost("/api/alumnos/me/avatar", async (
+    HttpContext httpContext,
+    HttpRequest request,
+    IMediator mediator,
+    IAppDbContext db) =>
+{
+    var userEmail = httpContext.User.FindFirst("preferred_username")?.Value
+                    ?? httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .Include(u => u.Alumnos)
+        .FirstOrDefaultAsync(u => u.Correo == userEmail);
+
+    if (usuario?.Alumnos.FirstOrDefault() == null)
+        return Results.NotFound(new { error = "Perfil de alumno no encontrado" });
+
+    if (!request.HasFormContentType || !request.Form.Files.Any())
+        return Results.BadRequest(new { error = "No se ha enviado ningún archivo" });
+
+    var file = request.Form.Files[0];
+    using var memoryStream = new MemoryStream();
+    await file.CopyToAsync(memoryStream);
+    var fileBytes = memoryStream.ToArray();
+
+    var idAlumno = usuario.Alumnos.First().IdAlumno;
+    var command = new UploadAvatarCommand(idAlumno, file.FileName, fileBytes);
+    var result = await mediator.Send(command);
+
+    return result.Succeeded
+        ? Results.Ok(new { url = result.Value, message = "Avatar actualizado correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("ApiScope");
+
+// ============================================
+// PERFIL ADMIN ENDPOINTS
+// ============================================
+
+// GET /api/admin/me/perfil - Obtener perfil del admin autenticado (AdminOnly)
+app.MapGet("/api/admin/me/perfil", async (
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var query = new GetPerfilAdminQuery(emailClaim);
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PUT /api/admin/me/datos-personales - Actualizar datos personales del admin (AdminOnly)
+app.MapPut("/api/admin/me/datos-personales", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdateDatosPersonalesAdminDTO dto) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .FirstOrDefaultAsync(u => u.Correo == emailClaim);
+
+    if (usuario == null)
+        return Results.NotFound(new { error = "Usuario no encontrado" });
+
+    var command = new UpdateDatosPersonalesAdminCommand(
+        usuario.IdUsuario,
+        dto.NombreCompleto,
+        dto.Telefono,
+        dto.Direccion ?? string.Empty,
+        dto.FechaNacimiento
+    );
+    
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded
+        ? Results.Ok(new { message = "Datos personales actualizados correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PUT /api/admin/me/datos-academia - Actualizar datos de la academia (AdminOnly)
+app.MapPut("/api/admin/me/datos-academia", async (
+    IMediator mediator,
+    [FromBody] UpdateDatosAcademiaDTO dto) =>
+{
+    var command = new UpdateDatosAcademiaCommand(
+        dto.Nombre,
+        dto.Direccion,
+        dto.Telefono,
+        dto.Email,
+        dto.Instagram,
+        dto.Facebook,
+        dto.WhatsApp
+    );
+    
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded
+        ? Results.Ok(new { message = "Datos de academia actualizados correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PUT /api/admin/me/configuracion - Actualizar configuración del admin (AdminOnly)
+app.MapPut("/api/admin/me/configuracion", async (
+    HttpContext httpContext,
+    IMediator mediator,
+    IAppDbContext db,
+    [FromBody] UpdateConfiguracionAdminDTO dto) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .FirstOrDefaultAsync(u => u.Correo == emailClaim);
+
+    if (usuario == null)
+        return Results.NotFound(new { error = "Usuario no encontrado" });
+
+    var command = new UpdateConfiguracionAdminCommand(
+        usuario.IdUsuario,
+        dto.NotificacionesEmail,
+        dto.AlertasPagosPendientes,
+        dto.ReportesAutomaticos,
+        dto.AlertasPaquetesVencer,
+        dto.AlertasAsistenciaBaja,
+        dto.NotificacionesNuevosRegistros
+    );
+    
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded
+        ? Results.Ok(new { message = "Configuración actualizada correctamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/reportes/exportar - Exportar reporte (AdminOrProfesor)
+app.MapGet("/api/reportes/exportar", async (
+    IMediator mediator,
+    ExcelExportService excelService,
+    PdfExportService pdfService,
+    CsvExportService csvService,
+    string tipoReporte,
+    string formato,
+    DateTime fechaDesde,
+    DateTime fechaHasta,
+    Guid? idClase = null,
+    Guid? idAlumno = null,
+    Guid? idProfesor = null,
+    string? estado = null,
+    Guid? idMetodoPago = null,
+    Guid? idTipoPaquete = null) =>
+{
+    byte[] fileBytes;
+    string contentType;
+    string fileName;
+
+    // Generar reporte según tipo
+    if (tipoReporte.ToLower() == "asistencias")
+    {
+        var query = new GetReporteAsistenciasQuery
+        {
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            IdClase = idClase,
+            IdAlumno = idAlumno,
+            IdProfesor = idProfesor,
+            EmailUsuario = "",
+            EsAdmin = true,
+            EsProfesor = false
+        };
+        var result = await mediator.Send(query);
+        
+        if (!result.Succeeded)
+            return Results.BadRequest(new { error = result.Error });
+
+        fileBytes = formato.ToLower() switch
+        {
+            "excel" => excelService.ExportarAsistencias(result.Value!),
+            "pdf" => pdfService.ExportarAsistencias(result.Value!, fechaDesde, fechaHasta),
+            "csv" => csvService.ExportarAsistencias(result.Value!),
+            _ => throw new InvalidOperationException("Formato no soportado")
+        };
+        fileName = $"reporte-asistencias-{DateTime.Now:yyyyMMdd}.{formato.ToLower()}";
+    }
+    else if (tipoReporte.ToLower() == "ingresos")
+    {
+        var query = new GetReporteIngresosQuery
+        {
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            IdMetodoPago = idMetodoPago,
+            ComparativaMesAnterior = false
+        };
+        var result = await mediator.Send(query);
+        
+        if (!result.Succeeded)
+            return Results.BadRequest(new { error = result.Error });
+
+        fileBytes = formato.ToLower() switch
+        {
+            "excel" => excelService.ExportarIngresos(result.Value!),
+            "pdf" => pdfService.ExportarIngresos(result.Value!, fechaDesde, fechaHasta),
+            "csv" => csvService.ExportarIngresos(result.Value!),
+            _ => throw new InvalidOperationException("Formato no soportado")
+        };
+        fileName = $"reporte-ingresos-{DateTime.Now:yyyyMMdd}.{formato.ToLower()}";
+    }
+    else if (tipoReporte.ToLower() == "paquetes")
+    {
+        var query = new GetReportePaquetesQuery
+        {
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            Estado = estado,
+            IdTipoPaquete = idTipoPaquete
+        };
+        var result = await mediator.Send(query);
+        
+        if (!result.Succeeded)
+            return Results.BadRequest(new { error = result.Error });
+
+        fileBytes = formato.ToLower() switch
+        {
+            "excel" => excelService.ExportarPaquetes(result.Value!),
+            "pdf" => pdfService.ExportarPaquetes(result.Value!, fechaDesde, fechaHasta),
+            "csv" => csvService.ExportarPaquetes(result.Value!),
+            _ => throw new InvalidOperationException("Formato no soportado")
+        };
+        fileName = $"reporte-paquetes-{DateTime.Now:yyyyMMdd}.{formato.ToLower()}";
+    }
+    else if (tipoReporte.ToLower() == "clases")
+    {
+        var query = new GetReporteClasesQuery
+        {
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            IdProfesor = idProfesor,
+            EmailUsuario = "",
+            EsAdmin = true,
+            EsProfesor = false
+        };
+        var result = await mediator.Send(query);
+        
+        if (!result.Succeeded)
+            return Results.BadRequest(new { error = result.Error });
+
+        fileBytes = formato.ToLower() switch
+        {
+            "excel" => excelService.ExportarClases(result.Value!),
+            "csv" => csvService.ExportarClases(result.Value!),
+            _ => throw new InvalidOperationException("Formato no soportado")
+        };
+        fileName = $"reporte-clases-{DateTime.Now:yyyyMMdd}.{formato.ToLower()}";
+    }
+    else if (tipoReporte.ToLower() == "alumnos")
+    {
+        var query = new GetReporteAlumnosQuery
+        {
+            FechaInscripcionDesde = fechaDesde,
+            FechaInscripcionHasta = fechaHasta,
+            Estado = estado
+        };
+        var result = await mediator.Send(query);
+        
+        if (!result.Succeeded)
+            return Results.BadRequest(new { error = result.Error });
+
+        fileBytes = formato.ToLower() switch
+        {
+            "excel" => excelService.ExportarAlumnos(result.Value!),
+            "csv" => csvService.ExportarAlumnos(result.Value!),
+            _ => throw new InvalidOperationException("Formato no soportado")
+        };
+        fileName = $"reporte-alumnos-{DateTime.Now:yyyyMMdd}.{formato.ToLower()}";
+    }
+    else
+    {
+        return Results.BadRequest(new { error = "Tipo de reporte no soportado" });
+    }
+
+    // Definir contentType
+    contentType = formato.ToLower() switch
+    {
+        "excel" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "pdf" => "application/pdf",
+        "csv" => "text/csv",
+        _ => "application/octet-stream"
+    };
+
+    return Results.File(fileBytes, contentType, fileName);
+}).RequireAuthorization("AdminOrProfesor");
+
+// ====== ENDPOINTS DE USUARIOS ======
+
+// GET /api/usuarios - Lista paginada de usuarios con filtros (AdminOnly)
+app.MapGet("/api/usuarios", async (
+    int page = 1,
+    int pageSize = 10,
+    string? searchTerm = null,
+    string? rol = null,
+    string? estado = null,
+    IMediator mediator = null!) =>
+{
+    var query = new GetUsersQuery(page, pageSize, searchTerm, rol, estado);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/usuarios/{id} - Detalle de usuario (AdminOnly)
+app.MapGet("/api/usuarios/{id:guid}", async (
+    Guid id,
+    IMediator mediator) =>
+{
+    var query = new GetUserDetailQuery(id);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.NotFound(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/usuarios - Crear un nuevo usuario (AdminOnly)
+app.MapPost("/api/usuarios", async (
+    CreateUserRequest request,
+    IMediator mediator) =>
+{
+    var datosProfesor = request.DatosProfesor != null
+        ? new DatosProfesorRequest(
+            request.DatosProfesor.TipoProfesor,
+            request.DatosProfesor.FechaIngreso,
+            request.DatosProfesor.Biografia,
+            request.DatosProfesor.Especialidades,
+            request.DatosProfesor.TarifaActual)
+        : null;
+
+    var datosAlumno = request.DatosAlumno != null
+        ? new DatosAlumnoRequest(
+            request.DatosAlumno.ContactoEmergencia,
+            request.DatosAlumno.TelefonoEmergencia,
+            request.DatosAlumno.ObservacionesMedicas)
+        : null;
+
+    var command = new CreateUserCommand(
+        request.NombreUsuario,
+        request.Correo,
+        request.Telefono,
+        request.TipoDocumento,
+        request.NumeroDocumento,
+        request.Rol,
+        request.FechaNacimiento,
+        datosProfesor,
+        datosAlumno,
+        request.CorreoAzure,
+        request.ContrasenaTemporalAzure,
+        request.EnviarWhatsApp,
+        request.EnviarEmail
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Created($"/api/usuarios/{result.Value}", new { idUsuario = result.Value }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PUT /api/usuarios/{id} - Actualizar un usuario (AdminOnly)
+app.MapPut("/api/usuarios/{id:guid}", async (
+    Guid id,
+    UpdateUserRequest request,
+    IMediator mediator) =>
+{
+    if (id != request.IdUsuario)
+        return Results.BadRequest(new { error = "El ID en la ruta no coincide con el ID del request" });
+
+    var datosProfesor = request.DatosProfesor != null
+        ? new DatosProfesorRequest(
+            request.DatosProfesor.TipoProfesor,
+            request.DatosProfesor.FechaIngreso,
+            request.DatosProfesor.Biografia,
+            request.DatosProfesor.Especialidades,
+            request.DatosProfesor.TarifaActual)
+        : null;
+
+    var datosAlumno = request.DatosAlumno != null
+        ? new DatosAlumnoRequest(
+            request.DatosAlumno.ContactoEmergencia,
+            request.DatosAlumno.TelefonoEmergencia,
+            request.DatosAlumno.ObservacionesMedicas)
+        : null;
+
+    var command = new UpdateUserCommand(
+        request.IdUsuario,
+        request.NombreUsuario,
+        request.Telefono,
+        request.FechaNacimiento,
+        datosProfesor,
+        datosAlumno
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// DELETE /api/usuarios/{id} - Eliminar un usuario (AdminOnly)
+app.MapDelete("/api/usuarios/{id:guid}", async (
+    Guid id,
+    IMediator mediator) =>
+{
+    var command = new DeleteUserCommand(id);
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/usuarios/{id}/activate - Activar un usuario (AdminOnly)
+app.MapPost("/api/usuarios/{id:guid}/activate", async (
+    Guid id,
+    ActivateUserRequest request,
+    IMediator mediator) =>
+{
+    var command = new ActivateUserCommand(id, request.CorreoAzure, request.ContrasenaTemporalAzure);
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// ====== ENDPOINTS DE NÓMINA ======
+
+// GET /api/nomina/clases-realizadas - Obtener clases realizadas con información de pago (AdminOnly)
+app.MapGet("/api/nomina/clases-realizadas", async (
+    DateTime? fechaDesde = null,
+    DateTime? fechaHasta = null,
+    Guid? idProfesor = null,
+    string? estadoPago = null,
+    IMediator mediator = null!) =>
+{
+    var query = new GetClasesRealizadasQuery(fechaDesde, fechaHasta, idProfesor, estadoPago);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/nomina/clases-aprobadas - Obtener clases aprobadas de un profesor para un mes (AdminOnly)
+app.MapGet("/api/nomina/clases-aprobadas", async (
+    Guid idProfesor,
+    int mes,
+    int año,
+    IMediator mediator) =>
+{
+    var query = new GetClasesAprobadasQuery(idProfesor, mes, año);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/nomina/resumen-profesores - Obtener resumen de profesores (AdminOnly)
+app.MapGet("/api/nomina/resumen-profesores", async (
+    Guid? idProfesor = null,
+    IMediator mediator = null!) =>
+{
+    var query = new GetResumenProfesorQuery(idProfesor);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/nomina/mi-resumen - Obtener resumen del profesor autenticado (Profesor)
+app.MapGet("/api/nomina/mi-resumen", async (
+    ClaimsPrincipal user,
+    ChetangoDbContext db,
+    IMediator mediator) =>
+{
+    var emailClaim = user.FindFirst(ClaimTypes.Email)?.Value
+        ?? user.FindFirst("preferred_username")?.Value
+        ?? user.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    // Obtener el ID del profesor desde el email
+    var profesor = await db.Profesores
+        .Include(p => p.Usuario)
+        .FirstOrDefaultAsync(p => p.Usuario.Correo == emailClaim);
+
+    if (profesor is null)
+        return Results.NotFound(new { error = "Profesor no encontrado" });
+
+    var query = new GetResumenProfesorQuery(profesor.IdProfesor);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization();
+
+// GET /api/nomina/liquidacion - Obtener detalle de liquidación (AdminOnly)
+app.MapGet("/api/nomina/liquidacion", async (
+    Guid? idLiquidacion = null,
+    Guid? idProfesor = null,
+    int? mes = null,
+    int? año = null,
+    IMediator mediator = null!) =>
+{
+    var query = new GetLiquidacionMensualQuery(idLiquidacion, idProfesor, mes, año);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/nomina/liquidaciones-por-estado - Obtener liquidaciones filtradas por estado (AdminOnly)
+app.MapGet("/api/nomina/liquidaciones-por-estado", async (
+    string? estado = null,
+    int? año = null,
+    IMediator mediator = null!) =>
+{
+    var query = new GetLiquidacionesPorEstadoQuery(estado, año);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/nomina/mis-liquidaciones-lista - Obtener lista de liquidaciones del profesor autenticado
+app.MapGet("/api/nomina/mis-liquidaciones-lista", async (
+    int? año = null,
+    ClaimsPrincipal user = null!,
+    ChetangoDbContext db = null!,
+    IMediator mediator = null!) =>
+{
+    var emailClaim = user.FindFirst(ClaimTypes.Email)?.Value
+        ?? user.FindFirst("preferred_username")?.Value
+        ?? user.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var profesor = await db.Profesores
+        .Include(p => p.Usuario)
+        .FirstOrDefaultAsync(p => p.Usuario.Correo == emailClaim);
+
+    if (profesor is null)
+        return Results.NotFound(new { error = "Profesor no encontrado" });
+
+    var query = new GetLiquidacionesProfesorQuery(profesor.IdProfesor, año);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization();
+
+// GET /api/nomina/mis-liquidaciones - Obtener liquidaciones del profesor autenticado (Profesor)
+app.MapGet("/api/nomina/mis-liquidaciones", async (
+    Guid? idLiquidacion = null,
+    int? mes = null,
+    int? año = null,
+    ClaimsPrincipal user = null!,
+    ChetangoDbContext db = null!,
+    IMediator mediator = null!) =>
+{
+    var emailClaim = user.FindFirst(ClaimTypes.Email)?.Value
+        ?? user.FindFirst("preferred_username")?.Value
+        ?? user.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    // Obtener el ID del profesor desde el email
+    var profesor = await db.Profesores
+        .Include(p => p.Usuario)
+        .FirstOrDefaultAsync(p => p.Usuario.Correo == emailClaim);
+
+    if (profesor is null)
+        return Results.NotFound(new { error = "Profesor no encontrado" });
+
+    var query = new GetLiquidacionMensualQuery(idLiquidacion, profesor.IdProfesor, mes, año);
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization();
+
+// POST /api/nomina/aprobar-pago - Aprobar pago de una clase (AdminOnly)
+app.MapPost("/api/nomina/aprobar-pago", async (
+    AprobarPagoClaseRequest request,
+    ClaimsPrincipal user,
+    ChetangoDbContext db,
+    IMediator mediator,
+    ILogger<Program> logger) =>
+{
+    // Extraer email del claim correcto (Azure AD B2C usa 'preferred_username')
+    var email = user.FindFirst(ClaimTypes.Email)?.Value 
+             ?? user.FindFirst("preferred_username")?.Value 
+             ?? user.FindFirst("email")?.Value;
+    
+    if (string.IsNullOrEmpty(email))
+        return Results.Unauthorized();
+    
+    var admin = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == email);
+    if (admin == null)
+        return Results.Unauthorized();
+    
+    var command = new AprobarPagoClaseCommand(
+        request.IdClaseProfesor,
+        request.ValorAdicional,
+        request.ConceptoAdicional,
+        admin.IdUsuario
+    );
+    
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(new { success = true, message = "Pago aprobado exitosamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/nomina/liquidar-mes - Generar liquidación mensual (AdminOnly)
+app.MapPost("/api/nomina/liquidar-mes", async (
+    LiquidarMesRequest request,
+    ClaimsPrincipal user,
+    ChetangoDbContext db,
+    IMediator mediator) =>
+{
+    var email = user.FindFirst(ClaimTypes.Email)?.Value 
+             ?? user.FindFirst("preferred_username")?.Value 
+             ?? user.FindFirst("email")?.Value;
+    if (string.IsNullOrEmpty(email))
+        return Results.Unauthorized();
+    
+    var admin = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == email);
+    if (admin == null)
+        return Results.Unauthorized();
+    
+    var command = new LiquidarMesCommand(
+        request.IdProfesor,
+        request.Mes,
+        request.Año,
+        admin.IdUsuario,
+        request.Observaciones
+    );
+    
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/nomina/registrar-pago - Registrar pago realizado (AdminOnly)
+app.MapPost("/api/nomina/registrar-pago", async (
+    RegistrarPagoProfesorRequest request,
+    IMediator mediator) =>
+{
+    var command = new RegistrarPagoProfesorCommand(
+        request.IdLiquidacion,
+        request.FechaPago,
+        request.Observaciones
+    );
+    
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(new { success = true, message = "Pago registrado exitosamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// DELETE /api/nomina/liquidacion/{id} - Eliminar liquidación (AdminOnly)
+app.MapDelete("/api/nomina/liquidacion/{id:guid}", async (
+    Guid id,
+    IMediator mediator) =>
+{
+    var command = new EliminarLiquidacionCommand(id);
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(new { success = true, message = "Liquidación eliminada exitosamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/nomina/clases-profesor/{idProfesor} - Obtener clases de un profesor con filtros (AdminOnly)
+app.MapGet("/api/nomina/clases-profesor/{idProfesor:guid}", async (
+    Guid idProfesor,
+    [FromQuery] DateTime? fechaDesde,
+    [FromQuery] DateTime? fechaHasta,
+    [FromQuery] string? estadoPago,
+    IMediator mediator) =>
+{
+    var query = new GetClasesPorProfesorQuery(
+        idProfesor,
+        fechaDesde,
+        fechaHasta,
+        estadoPago
+    );
+    
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value)
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 

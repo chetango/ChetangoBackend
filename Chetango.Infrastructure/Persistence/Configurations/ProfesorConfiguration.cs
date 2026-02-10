@@ -11,6 +11,10 @@ public class ProfesorConfiguration : IEntityTypeConfiguration<Profesor>
         builder.ToTable("Profesores");
         builder.HasKey(p => p.IdProfesor);
 
+        builder.Property(p => p.TarifaActual)
+            .HasColumnType("decimal(18,2)")
+            .HasDefaultValue(0);
+
         builder.HasOne(p => p.Usuario)
             .WithMany(u => u.Profesores)
             .HasForeignKey(p => p.IdUsuario)

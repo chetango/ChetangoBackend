@@ -44,11 +44,13 @@ public class TipoPaqueteConfiguration : IEntityTypeConfiguration<TipoPaquete>
         builder.ToTable("TiposPaquete");
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Nombre).IsRequired().HasMaxLength(100);
+        builder.Property(t => t.Precio).HasColumnType("decimal(18,2)");
+        builder.Property(t => t.Activo).HasDefaultValue(true);
         builder.HasIndex(t => t.Nombre).IsUnique();
         builder.HasData(
-            new TipoPaquete { Id = Guid.Parse("77777777-7777-7777-7777-777777777777"), Nombre = "Mensual" },
-            new TipoPaquete { Id = Guid.Parse("88888888-8888-8888-8888-888888888888"), Nombre = "BonoClases" },
-            new TipoPaquete { Id = Guid.Parse("99999999-9999-9999-9999-999999999999"), Nombre = "Ilimitado" }
+            new TipoPaquete { Id = Guid.Parse("77777777-7777-7777-7777-777777777777"), Nombre = "Mensual", NumeroClases = 0, Precio = 0, DiasVigencia = 30, Activo = true },
+            new TipoPaquete { Id = Guid.Parse("88888888-8888-8888-8888-888888888888"), Nombre = "BonoClases", NumeroClases = 0, Precio = 0, DiasVigencia = 0, Activo = true },
+            new TipoPaquete { Id = Guid.Parse("99999999-9999-9999-9999-999999999999"), Nombre = "Ilimitado", NumeroClases = 0, Precio = 0, DiasVigencia = 30, Activo = true }
         );
     }
 }

@@ -17,5 +17,12 @@ public record PaqueteDetalleDTO(
     string Estado,
     bool EstaVencido,
     bool TieneClasesDisponibles,
-    List<CongelacionDTO> Congelaciones
+    List<CongelacionDTO> Congelaciones,
+    List<AlumnoPaqueteDTO>? AlumnosDelPago = null
+);
+
+// DTO para representar un alumno en el mismo pago (para paquetes compartidos)
+public record AlumnoPaqueteDTO(
+    Guid IdAlumno,
+    string NombreAlumno
 );

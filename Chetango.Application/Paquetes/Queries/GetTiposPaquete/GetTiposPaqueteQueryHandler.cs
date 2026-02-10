@@ -15,11 +15,17 @@ public class GetTiposPaqueteQueryHandler : IRequestHandler<GetTiposPaqueteQuery,
     public async Task<Result<List<TipoPaqueteDTO>>> Handle(GetTiposPaqueteQuery request, CancellationToken cancellationToken)
     {
         var tiposPaquete = await _db.Set<TipoPaquete>()
+            .Where(tp => tp.Activo) // Solo tipos activos
             .AsNoTracking()
-            .OrderBy(tp => tp.Nombre)
+            .OrderBy(tp => tp.Precio)
             .Select(tp => new TipoPaqueteDTO(
                 tp.Id,
-                tp.Nombre
+                tp.Nombre,
+                tp.NumeroClases,
+                tp.Precio,
+                tp.DiasVigencia,
+                tp.Descripcion,
+                tp.Activo
             ))
             .ToListAsync(cancellationToken);
 

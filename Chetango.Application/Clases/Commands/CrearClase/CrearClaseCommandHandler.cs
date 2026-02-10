@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -13,16 +14,47 @@ public class CrearClaseCommandHandler : IRequestHandler<CrearClaseCommand, Resul
 
     public async Task<Result<Guid>> Handle(CrearClaseCommand request, CancellationToken cancellationToken)
     {
-        // 1. Validar que la fecha es futura
+        // RETROCOMPATIBILIDAD: Convertir formato antiguo al nuevo si es necesario
+        var profesoresRequest = request.Profesores ?? new List<ProfesorClaseRequest>();
+        
+        if (profesoresRequest.Count == 0 && request.IdProfesorPrincipal.HasValue)
+        {
+            // Modo retrocompatibilidad: convertir del formato antiguo
+            profesoresRequest.Add(new ProfesorClaseRequest(request.IdProfesorPrincipal.Value, "Principal"));
+            
+            if (request.IdsMonitores != null && request.IdsMonitores.Any())
+            {
+                foreach (var idMonitor in request.IdsMonitores)
+                {
+                    profesoresRequest.Add(new ProfesorClaseRequest(idMonitor, "Monitor"));
+                }
+            }
+        }
+
+        // 1. Validar que se especificó al menos un profesor
+        if (!profesoresRequest.Any())
+            return Result<Guid>.Failure("Debe especificar al menos un profesor para la clase.");
+
+        // 2. Validar que hay al menos un profesor principal
+        var profesoresPrincipales = profesoresRequest.Where(p => p.RolEnClase == "Principal").ToList();
+        if (profesoresPrincipales.Count == 0)
+            return Result<Guid>.Failure("Debe especificar al menos un profesor principal para la clase.");
+
+        // 3. Validar que no hay profesores duplicados
+        var profesoresUnicos = profesoresRequest.Select(p => p.IdProfesor).Distinct().ToList();
+        if (profesoresUnicos.Count != profesoresRequest.Count)
+            return Result<Guid>.Failure("No se pueden asignar profesores duplicados a la misma clase.");
+
+        // 4. Validar que la fecha es futura
         var fechaHoraInicio = request.Fecha.Date.Add(request.HoraInicio);
-        if (fechaHoraInicio <= DateTime.Now)
+        if (fechaHoraInicio <= DateTimeHelper.Now)
             return Result<Guid>.Failure("La clase debe programarse para una fecha y hora futura.");
 
-        // 2. Validar que HoraFin es posterior a HoraInicio
+        // 5. Validar que HoraFin es posterior a HoraInicio
         if (request.HoraFin <= request.HoraInicio)
             return Result<Guid>.Failure("La hora de fin debe ser posterior a la hora de inicio.");
 
-        // 3. Validar que el tipo de clase existe
+        // 6. Validar que el tipo de clase existe
         var tipoClaseExiste = await _db.Set<TipoClase>()
             .AsNoTracking()
             .AnyAsync(tc => tc.Id == request.IdTipoClase, cancellationToken);
@@ -30,40 +62,62 @@ public class CrearClaseCommandHandler : IRequestHandler<CrearClaseCommand, Resul
         if (!tipoClaseExiste)
             return Result<Guid>.Failure("El tipo de clase especificado no existe.");
 
-        // 4. Validar que el profesor existe y está activo
-        var profesor = await _db.Set<Profesor>()
+        // 7. Validar que todos los profesores existen y están activos
+        var profesores = await _db.Set<Profesor>()
             .Include(p => p.Usuario)
-            .FirstOrDefaultAsync(p => p.IdProfesor == request.IdProfesorPrincipal, cancellationToken);
+            .Include(p => p.TipoProfesor)
+            .Where(p => profesoresUnicos.Contains(p.IdProfesor))
+            .ToListAsync(cancellationToken);
 
-        if (profesor is null)
-            return Result<Guid>.Failure("El profesor especificado no existe.");
+        if (profesores.Count != profesoresUnicos.Count)
+            return Result<Guid>.Failure("Uno o más profesores especificados no existen.");
 
-        // 5. Validación de ownership: Profesor solo puede crear clases para sí mismo
+        // 8. Validar que los roles existen
+        var rolesNombres = profesoresRequest.Select(p => p.RolEnClase).Distinct().ToList();
+        var roles = await _db.Set<RolEnClase>()
+            .Where(r => rolesNombres.Contains(r.Nombre))
+            .ToListAsync(cancellationToken);
+
+        if (roles.Count != rolesNombres.Count)
+            return Result<Guid>.Failure("Uno o más roles especificados no son válidos.");
+
+        // 9. Validación de ownership: Profesor solo puede crear clases donde él sea uno de los principales
         if (!request.EsAdmin)
         {
-            if (profesor.IdUsuario.ToString() != request.IdUsuarioActual)
-                return Result<Guid>.Failure("No tienes permiso para crear clases para otro profesor.");
+            var idsProfesoresPrincipales = profesoresPrincipales.Select(pp => pp.IdProfesor).ToList();
+            var esUnoDeLosrincipales = profesores
+                .Where(p => idsProfesoresPrincipales.Contains(p.IdProfesor))
+                .Any(p => p.IdUsuario.ToString() == request.IdUsuarioActual);
+            
+            if (!esUnoDeLosrincipales)
+                return Result<Guid>.Failure("No tienes permiso para crear clases donde no seas uno de los profesores principales.");
         }
 
-        // 6. Validar que no hay conflicto de horario para el profesor
-        var tieneConflicto = await _db.Set<Chetango.Domain.Entities.Clase>()
-            .Where(c => c.IdProfesorPrincipal == request.IdProfesorPrincipal 
-                     && c.Fecha == request.Fecha.Date)
-            .AnyAsync(c => 
-                // Conflicto si los horarios se solapan
-                (request.HoraInicio >= c.HoraInicio && request.HoraInicio < c.HoraFin) || // Inicia durante otra clase
-                (request.HoraFin > c.HoraInicio && request.HoraFin <= c.HoraFin) || // Termina durante otra clase
-                (request.HoraInicio <= c.HoraInicio && request.HoraFin >= c.HoraFin), // Envuelve otra clase
-                cancellationToken);
+        // 10. Validar que ningún profesor tiene conflicto de horario
+        foreach (var idProfesor in profesoresUnicos)
+        {
+            // Buscar si el profesor tiene alguna clase en ese horario (en cualquier rol)
+            var tieneConflicto = await _db.Set<ClaseProfesor>()
+                .Include(cp => cp.Clase)
+                .Where(cp => cp.IdProfesor == idProfesor && cp.Clase.Fecha == request.Fecha.Date)
+                .AnyAsync(cp => 
+                    (request.HoraInicio >= cp.Clase.HoraInicio && request.HoraInicio < cp.Clase.HoraFin) ||
+                    (request.HoraFin > cp.Clase.HoraInicio && request.HoraFin <= cp.Clase.HoraFin) ||
+                    (request.HoraInicio <= cp.Clase.HoraInicio && request.HoraFin >= cp.Clase.HoraFin),
+                    cancellationToken);
 
-        if (tieneConflicto)
-            return Result<Guid>.Failure("El profesor ya tiene una clase programada en ese horario.");
+            if (tieneConflicto)
+            {
+                var profesor = profesores.First(p => p.IdProfesor == idProfesor);
+                return Result<Guid>.Failure($"El profesor {profesor.NombreCompleto} ya tiene una clase programada en ese horario.");
+            }
+        }
 
-        // 7. Crear la clase
+        // 11. Crear la clase (con IdProfesorPrincipal nullable para retrocompatibilidad)
         var clase = new Chetango.Domain.Entities.Clase
         {
             IdClase = Guid.NewGuid(),
-            IdProfesorPrincipal = request.IdProfesorPrincipal,
+            IdProfesorPrincipal = profesoresPrincipales[0].IdProfesor, // Temporal para retrocompatibilidad
             IdTipoClase = request.IdTipoClase,
             Fecha = request.Fecha.Date,
             HoraInicio = request.HoraInicio,
@@ -73,6 +127,29 @@ public class CrearClaseCommandHandler : IRequestHandler<CrearClaseCommand, Resul
         };
 
         _db.Set<Chetango.Domain.Entities.Clase>().Add(clase);
+
+        // 12. Agregar profesores con sus roles y tarifas programadas
+        foreach (var profesorReq in profesoresRequest)
+        {
+            var profesor = profesores.First(p => p.IdProfesor == profesorReq.IdProfesor);
+            var rol = roles.First(r => r.Nombre == profesorReq.RolEnClase);
+
+            var claseProfesor = new ClaseProfesor
+            {
+                IdClaseProfesor = Guid.NewGuid(),
+                IdClase = clase.IdClase,
+                IdProfesor = profesorReq.IdProfesor,
+                IdRolEnClase = rol.Id,
+                TarifaProgramada = profesor.TarifaActual, // Usar tarifa individual del profesor
+                ValorAdicional = 0,
+                TotalPago = profesor.TarifaActual,
+                EstadoPago = "Pendiente",
+                FechaCreacion = DateTimeHelper.Now
+            };
+
+            _db.Set<ClaseProfesor>().Add(claseProfesor);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
 
         return Result<Guid>.Success(clase.IdClase);

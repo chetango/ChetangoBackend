@@ -2,8 +2,42 @@
 
 Este documento detalla los módulos principales de la aplicación Chetango, con descripción funcional, usuarios involucrados, estado de implementación y prioridad de desarrollo.
 
-> **Última actualización:** 11 Enero 2026  
-> **Estado general:** MVP Fase 1 - Módulos Asistencias, Clases, Paquetes y Pagos completados
+> **Última actualización:** 5 Febrero 2026  
+> **Estado general:** MVP Fase 1 - Módulos Asistencias (con TipoAsistencia), Clases, Paquetes, Pagos y Reportes completados
+
+---
+
+## ⚠️ Consideraciones Importantes de Base de Datos
+
+### Codificación de Caracteres (Unicode / UTF-8)
+
+**IMPORTANTE:** SQL Server maneja Unicode automáticamente con tipos `NVARCHAR/NCHAR/NTEXT`, pero requiere el prefijo `N''` en strings literales para preservar caracteres especiales (acentos, ñ, etc.).
+
+#### ✅ Correcto
+```sql
+INSERT INTO Usuarios (NombreUsuario) VALUES (N'María Gómez');
+UPDATE Alumnos SET Nombre = N'José Pérez' WHERE Id = @id;
+```
+
+#### ❌ Incorrecto (causa corrupción)
+```sql
+INSERT INTO Usuarios (NombreUsuario) VALUES ('María Gómez');  -- Se guarda como "MarÃa GÃ³mez"
+```
+
+#### Síntomas de Corrupción
+- Nombres como "GÃ³mez" en lugar de "Gómez"
+- "MarÃa" en lugar de "María"
+- "PÃ©rez" en lugar de "Pérez"
+
+#### Solución
+1. **Prevención:** Usar siempre `N''` para strings con caracteres Unicode en SQL
+2. **Corrección:** Ejecutar script `scripts/fix_encoding_simple.sql` para corregir datos existentes
+3. **Connection String:** NO usar `Charset=utf8` (no es compatible con SQL Server)
+
+#### Scripts Disponibles
+- `scripts/fix_encoding_simple.sql` - Corrige nombres corruptos en tabla Usuarios
+- `scripts/fix_character_encoding.sql` - Versión completa para todas las tablas
+- Todos los scripts seed actualizados con prefijo `N''`
 
 ---
 
@@ -12,13 +46,13 @@ Este documento detalla los módulos principales de la aplicación Chetango, con 
 | Módulo | Estado | Completitud | Prioridad |
 |--------|--------|-------------|-----------|
 | 1. Autenticación y Seguridad | ✅ Completo | 100% | ✅ MVP |
-| 2. Asistencias | ✅ Completo | 95% | ✅ MVP |
+| 2. Asistencias + TipoAsistencia | ✅ Completo | 100% | ✅ MVP |
 | 3. Clases | ✅ Completo | 100% | ✅ MVP |
 | 4. Alumnos | ⚠️ Básico | 20% | Media |
 | 5. Profesores | ⚠️ Básico | 20% | Media |
 | 6. Paquetes | ✅ Completo | 100% | ✅ MVP |
 | 7. Pagos | ✅ Completo | 100% | ✅ MVP |
-| 8. Reportes | ❌ Pendiente | 0% | Baja |
+| 8. Reportes | ✅ Completo | 100% | ✅ MVP |
 | 9. Alertas y Notificaciones | ❌ Pendiente | 0% | Baja |
 
 ---
@@ -67,7 +101,7 @@ Ver: `docs/API-CONTRACT-FRONTEND.md` - Sección Configuración de Autenticación
 **Prioridad:** MVP - Crítico
 
 ### Descripción
-Permite registrar y consultar la asistencia de alumnos a clases específicas.
+Permite registrar y consultar la asistencia de alumnos a clases específicas con soporte para **múltiples tipos de asistencia** (Normal, Cortesía, Clase de Prueba, Recuperación).
 
 ### Usuarios Involucrados
 - **Profesores:** Registran asistencias de sus clases
@@ -76,6 +110,9 @@ Permite registrar y consultar la asistencia de alumnos a clases específicas.
 
 ### Funciones Implementadas
 - ✅ Registrar asistencia (profesor/admin)
+- ✅ **Catálogo TipoAsistencia con reglas de negocio centralizadas**
+- ✅ **Soporte para clases de cortesía/prueba sin descuento de paquete**
+- ✅ **Clases de recuperación sin descuento**
 - ✅ Actualizar estado de asistencia
 - ✅ Consultar asistencias por clase
 - ✅ Consultar asistencias por alumno (con validación de ownership)
@@ -83,9 +120,28 @@ Permite registrar y consultar la asistencia de alumnos a clases específicas.
 - ✅ Admin: Clases del día específico
 - ✅ Admin: Resumen de asistencias por clase
 
+### Catálogo TipoAsistencia 🆕
+
+Catálogo de tipos de asistencia con reglas de negocio centralizadas:
+
+| ID | Nombre | RequierePaquete | DescontarClase | Descripción |
+|----|--------|----------------|----------------|-------------|
+| 1 | Normal | ✅ Sí | ✅ Sí | Asistencia normal con paquete activo |
+| 2 | Cortesía | ❌ No | ❌ No | Clase de cortesía sin descuento |
+| 3 | Clase de Prueba | ❌ No | ❌ No | Clase de prueba para nuevos alumnos |
+| 4 | Recuperación | ✅ Sí | ❌ No | Recuperación por inasistencia justificada |
+
+**Ventajas:**
+- ✅ Extensible: Agregar tipos nuevos (becado, intercambio) sin cambiar código
+- ✅ Reportes potentes: Filtrar/agrupar por tipo de asistencia
+- ✅ Validaciones automáticas según `RequierePaquete`
+- ✅ Control de descuento según `DescontarClase`
+- ✅ Auditoría clara del tipo de asistencia
+
 ### Endpoints Disponibles
 ```
 POST   /api/asistencias                          [AdminOrProfesor]
+       Body: { idClase, idAlumno, idTipoAsistencia, idPaqueteUsado?, observaciones? }
 PUT    /api/asistencias/{id}/estado              [AdminOrProfesor]
 GET    /api/clases/{id}/asistencias              [AdminOrProfesor]
 GET    /api/alumnos/{idAlumno}/asistencias       [ApiScope + Ownership]
@@ -98,7 +154,7 @@ GET    /api/admin/asistencias/clase/{id}/resumen [AdminOnly]
 ```
 Chetango.Application/Asistencias/
   Commands/
-    - RegistrarAsistenciaCommand + Handler + Validator
+    - RegistrarAsistenciaCommand + Handler (validación por TipoAsistencia)
     - ActualizarEstadoAsistenciaCommand + Handler
   Queries/
     - GetAsistenciasPorClaseQuery + Handler
@@ -111,14 +167,34 @@ Chetango.Application/Asistencias/
     - AsistenciaDto, ClaseConAsistenciasDto, etc.
 ```
 
+### Validaciones por TipoAsistencia
+```csharp
+// Handler de RegistrarAsistencia
+if (tipoAsistencia.RequierePaquete && !request.IdPaqueteUsado.HasValue)
+    return Error("Este tipo requiere paquete activo");
+
+if (!tipoAsistencia.RequierePaquete && request.IdPaqueteUsado.HasValue)
+    return Error("Este tipo no debe incluir paquete");
+
+// Solo descuenta si el tipo lo permite
+if (estado == Presente && tipoAsistencia.DescontarClase && idPaquete.HasValue)
+    await DescontarClaseDelPaquete(idPaquete);
+```
+
 ### Relaciones
 - **Clase:** Una asistencia pertenece a una clase específica
 - **Alumno:** Una asistencia registra la presencia de un alumno
-- **Paquete:** Descuenta clase del paquete activo (implementado en dominio)
+- **TipoAsistencia:** Define comportamiento de descuento (Normal, Cortesía, etc.)
+- **Paquete:** Descuenta clase del paquete activo solo si TipoAsistencia.DescontarClase = true
 
-### Pendiente (5%)
-- ⚠️ Validación completa de paquetes disponibles al registrar
-- ⚠️ Notificaciones al descontar clase de paquete
+### Cambios Recientes (Enero 2026)
+- ✅ Agregado catálogo `TipoAsistencia` con seed data
+- ✅ `IdPaqueteUsado` ahora es nullable (permite cortesía sin paquete)
+- ✅ Validaciones centralizadas por tipo de asistencia
+- ✅ Migración: `AgregarCatalogoTipoAsistencia`
+
+### Pendiente (0%)
+- ✅ Todo implementado y funcional
 
 ---
 
@@ -126,7 +202,16 @@ Chetango.Application/Asistencias/
 
 **Estado:** ✅ Implementado y funcional  
 **Prioridad:** ✅ MVP - Crítico
+### ⚠️ Cambio Importante: Múltiples Profesores por Clase
 
+A partir de **Febrero 2026**, el sistema permite asignar **múltiples profesores principales y monitores** a una misma clase.
+
+**Cambios implementados:**
+- ✅ Tabla `ClasesProfesores` para relación muchos-a-muchos
+- ✅ Campo `IdRolEnClase` (Principal/Monitor) por cada asignación
+- ✅ Validación de ownership: cualquier profesor asignado puede ver/gestionar la clase
+- ✅ UI muestra todos los profesores con sus roles
+- ✅ Formato de tiempo estandarizado a 24h (HH:mm) en todo el sistema
 ### Descripción
 Gestión del calendario de clases: creación, edición, cancelación y consulta con validación de conflictos de horario y ownership.
 
@@ -136,24 +221,31 @@ Gestión del calendario de clases: creación, edición, cancelación y consulta 
 - **Alumnos:** Consultan clases disponibles
 
 ### Funciones Implementadas (100%)
-- ✅ Crear clase (profesor para sí mismo o admin para cualquier profesor)
-- ✅ Editar clase (profesor dueño o admin)
-- ✅ Cancelar clase (profesor dueño o admin)
-- ✅ Consultar detalle de clase por ID (con ownership validation)
-- ✅ Consultar clases de un profesor con filtros y paginación
-- ✅ Consultar clases de un alumno (ownership validation)
-- ✅ Validación de conflictos de horario
-- ✅ Validación de ownership (profesores solo gestionan sus clases)
-- ✅ Entidad `Clase` con relaciones completas
+- ✅ Crear clase (admin)
+  - **Permite múltiples profesores principales** (cambio Feb 2026)
+  - **Permite múltiples monitores** (cambio Feb 2026)
+  - Al menos un profesor principal requerido
+- ✅ Editar clase (admin + ownership)
+  - **Ownership validado contra todos los profesores asignados**
+- ✅ Consultar clases por profesor
+  - **Usa tabla ClasesProfesores para incluir todas las asignaciones**
+- ✅ Consultar clases por día
+- ✅ Detalle de clase
+  - **Incluye lista completa de profesores con roles**
+- ✅ Validaciones de negocio
+  - No clases duplicadas (mismo día/hora/tipo + **cualquier profesor asignado**)
+  - Hora fin debe ser posterior a hora inicio
+  - Cupo máximo > 0
+  - Al menos un profesor principal obligatorio
 
 ### Endpoints Disponibles
 ```
-POST   /api/clases                             [AdminOrProfesor + Ownership]
-PUT    /api/clases/{id}                        [AdminOrProfesor + Ownership]
-DELETE /api/clases/{id}                        [AdminOrProfesor + Ownership]
-GET    /api/clases/{id}                        [AdminOrProfesor]
-GET    /api/profesores/{idProfesor}/clases     [AdminOrProfesor + Ownership]
-GET    /api/alumnos/{idAlumno}/clases          [ApiScope + Ownership]
+POST   /api/clases                           [AdminOnly]
+PUT    /api/clases/{id}                      [AdminOnly]
+GET    /api/clases/{id}                      [ApiScope]
+GET    /api/clases/profesor/{idProfesor}     [ApiScope] (incluye Principal + Monitor)
+GET    /api/clases/dia/{fecha}               [ApiScope]
+GET    /api/clases/{id}/asistencias          [Profesor] (ownership validado)
 ```
 
 ### Arquitectura CQRS
@@ -192,9 +284,10 @@ Chetango.Application/Clases/
 
 ### Funcionalidades Clave
 - **Crear Clase:** 
-  - Profesor crea clase para sí mismo
+  - Profesor crea clase para sí mismo (debe ser uno de los principales)
   - Admin puede crear clase para cualquier profesor
-  - Validación de conflictos de horario
+  - Soporte para múltiples profesores principales y monitores
+  - Validación de conflictos de horario para todos los profesores
   - Validación de que fecha/hora es futura
   - Validación de tipo de clase existente
   
@@ -626,8 +719,11 @@ Paquetes, Asistencias, Alumnos
 ## 📚 Documentación Adicional
 
 - **Contrato API para Frontend:** `docs/API-CONTRACT-FRONTEND.md`
+- **Contrato API Clases:** `docs/API-CONTRACT-CLASES.md` ⚡ Actualizado Feb 2026
+- **Implementación Clases:** `docs/implementacion-modulo-clases.md` ⚡ Actualizado Feb 2026
 - **Matriz de pruebas AuthZ:** `docs/authz-postman-test-matrix.md`
 - **Scripts de datos de prueba:** `scripts/seed_usuarios_prueba_ciam.sql`
+- **Scripts de corrección:** `scripts/fix_encoding_simple.sql` 🆕
 - **Documentación de scripts:** `scripts/README.md`
 
 ---
@@ -664,6 +760,21 @@ Paquetes, Asistencias, Alumnos
 
 ---
 
-**Documento generado:** Enero 2026  
-**Versión:** 2.0  
+## 🔧 Historial de Cambios Importantes
+
+### Febrero 2026
+- ✅ **Múltiples profesores por clase:** Implementación completa con tabla ClasesProfesores
+- ✅ **Corrección de encoding:** Scripts para corregir caracteres Unicode corruptos
+- ✅ **Formato tiempo 24h:** Estandarización HH:mm en todo el sistema
+- ✅ **Ownership mejorado:** Validación contra todos los profesores asignados
+
+### Enero 2026
+- ✅ Catálogo TipoAsistencia con reglas de negocio centralizadas
+- ✅ Módulos Paquetes, Pagos y Reportes completados
+- ✅ Infraestructura OAuth 2.0 con Microsoft Entra CIAM
+
+---
+
+**Documento generado:** Febrero 2026  
+**Versión:** 2.1  
 **Mantenedor:** Equipo Backend Chetango

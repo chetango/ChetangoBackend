@@ -21,18 +21,21 @@ public class GetAsistenciasPorClaseQueryHandler : IRequestHandler<GetAsistencias
             .Include(a => a.Alumno)
             .ThenInclude(al => al.Usuario)
             .Include(a => a.Estado)
+            .Include(a => a.TipoAsistencia)
             .OrderBy(a => a.Alumno.Usuario.NombreUsuario)
             .Select(a => new AsistenciaDto(
                 a.IdAsistencia,
                 a.IdClase,
                 a.Clase.Fecha,
-                a.Clase.HoraInicio,
-                a.Clase.HoraFin,
+                $"{a.Clase.HoraInicio.Hours:D2}:{a.Clase.HoraInicio.Minutes:D2}",
+                $"{a.Clase.HoraFin.Hours:D2}:{a.Clase.HoraFin.Minutes:D2}",
                 a.Clase.TipoClase.Nombre,
                 a.IdAlumno,
                 a.Alumno.Usuario.NombreUsuario,
                 a.Estado.Nombre,
                 a.IdPaqueteUsado,
+                a.IdTipoAsistencia,
+                a.TipoAsistencia.Nombre,
                 a.Observacion
             ))
             .ToListAsync(cancellationToken);

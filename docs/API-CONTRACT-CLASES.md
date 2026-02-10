@@ -26,12 +26,14 @@ El módulo de **Clases** permite gestionar la programación de clases de baile, 
 - ✅ Cancelar clases (Admin o Profesor dueño)
 - ✅ Consultar clases individuales y listados
 - ✅ Catálogos para dropdowns (tipos de clase, profesores, alumnos, paquetes)
+- ✅ Soporte para múltiples profesores principales y monitores por clase
 
 **Características clave:**
 - Validación de horarios (sin conflictos)
 - Ownership validation (profesores solo editan sus clases)
 - Paginación en listados
 - Soporte de cupo máximo y observaciones
+- Múltiples profesores con roles individuales (Principal/Monitor)
 
 ---
 

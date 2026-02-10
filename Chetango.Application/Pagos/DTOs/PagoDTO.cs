@@ -6,5 +6,13 @@ public record PagoDTO(
     decimal MontoTotal,
     string NombreMetodoPago,
     string NombreAlumno,
+    string EstadoPago,
+    string? UrlComprobante,
+    string? ReferenciaTransferencia,
+    string? NotasVerificacion,
+    DateTime? FechaVerificacion,
+    string? UsuarioVerificacion,
     int CantidadPaquetes
 );
+
+
