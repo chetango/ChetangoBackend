@@ -21,7 +21,7 @@ public sealed class GetDiasConClasesAdminQueryHandler
         CancellationToken cancellationToken)
     {
         // Usamos la fecha actual del servidor (sin hora)
-        var hoyDateTime = DateTime.UtcNow.Date;
+        var hoyDateTime = DateTimeHelper.Today;
         var hoy = DateOnly.FromDateTime(hoyDateTime);
         var desde = hoy.AddDays(-7);
         var hasta = hoy;

@@ -28,6 +28,7 @@ public class GetPaqueteByIdQueryHandler : IRequestHandler<GetPaqueteByIdQuery, R
                 .ThenInclude(a => a.Usuario)
             .Include(p => p.TipoPaquete)
             .Include(p => p.Congelaciones)
+            .Include(p => p.Pago)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.IdPaquete == request.IdPaquete, cancellationToken);
 
@@ -61,7 +62,33 @@ public class GetPaqueteByIdQueryHandler : IRequestHandler<GetPaqueteByIdQuery, R
             ))
             .ToList() ?? new List<CongelacionDTO>();
 
-        // 5. Crear el DTO de detalle
+        // 5. Obtener todos los alumnos del mismo pago (si existe)
+        List<AlumnoPaqueteDTO>? alumnosDelPago = null;
+        if (paquete.IdPago.HasValue)
+        {
+            alumnosDelPago = await _db.Set<Paquete>()
+                .Where(p => p.IdPago == paquete.IdPago && p.IdPaquete != paquete.IdPaquete)
+                .Include(p => p.Alumno)
+                    .ThenInclude(a => a.Usuario)
+                .Select(p => new AlumnoPaqueteDTO(
+                    p.IdAlumno,
+                    p.Alumno.Usuario.NombreUsuario
+                ))
+                .Distinct()
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            // Agregar el alumno actual a la lista
+            if (alumnosDelPago.Count > 0)
+            {
+                alumnosDelPago.Insert(0, new AlumnoPaqueteDTO(
+                    paquete.IdAlumno,
+                    paquete.Alumno.Usuario.NombreUsuario
+                ));
+            }
+        }
+
+        // 6. Crear el DTO de detalle
         var clasesRestantes = paquete.ClasesDisponibles - paquete.ClasesUsadas;
         var estaVencido = paquete.FechaVencimiento < DateTime.Today;
         var tieneClasesDisponibles = clasesRestantes > 0;
@@ -82,7 +109,8 @@ public class GetPaqueteByIdQueryHandler : IRequestHandler<GetPaqueteByIdQuery, R
             estadoNombre,
             estaVencido,
             tieneClasesDisponibles,
-            congelaciones
+            congelaciones,
+            alumnosDelPago
         );
 
         return Result<PaqueteDetalleDTO>.Success(dto);

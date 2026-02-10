@@ -12,13 +12,20 @@ namespace Chetango.Domain.Entities.Estados
         public Guid IdAlumno { get; set; }
         public Alumno Alumno { get; set; } = null!;
 
-        public Guid IdPaqueteUsado { get; set; }
-        public Paquete PaqueteUsado { get; set; } = null!; // Debe corresponder a paquete activo del alumno
+public Guid? IdPaqueteUsado { get; set; } // Nullable: si es null = clase sin paquete
+    public Paquete? PaqueteUsado { get; set; } // Nullable: null cuando no se usa paquete
+
+    public int IdTipoAsistencia { get; set; } // Tipo: Normal, Cortesía, Prueba, Recuperación, etc.
+    public TipoAsistencia TipoAsistencia { get; set; } = null!;
 
         public int IdEstado { get; set; } // Presente / Ausente / Justificada
         public EstadoAsistencia Estado { get; set; } = null!;
 
         public string? Observacion { get; set; }
+
+        // Campo para confirmación del alumno
+        public bool Confirmado { get; set; } = false; // Indica si el alumno confirmó su asistencia
+        public DateTime? FechaConfirmacion { get; set; } // Fecha cuando el alumno confirmó
 
         // Campos de auditoría
         public DateTime FechaRegistro { get; set; }  // Equivalente a FechaCreacion

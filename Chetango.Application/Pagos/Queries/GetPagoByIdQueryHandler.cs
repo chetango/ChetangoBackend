@@ -19,12 +19,16 @@ public class GetPagoByIdQueryHandler : IRequestHandler<GetPagoByIdQuery, Result<
     {
         var pago = await _db.Set<Pago>()
             .Include(p => p.Alumno)
-            .Include(p => p.Alumno.Usuario)
+            .ThenInclude(a => a.Usuario)
             .Include(p => p.MetodoPago)
+            .Include(p => p.EstadoPago)
             .Include(p => p.Paquetes)
             .ThenInclude(paq => paq.TipoPaquete)
             .Include(p => p.Paquetes)
             .ThenInclude(paq => paq.Estado)
+            .Include(p => p.Paquetes)
+            .ThenInclude(paq => paq.Alumno)
+            .ThenInclude(a => a.Usuario)
             .FirstOrDefaultAsync(p => p.IdPago == request.IdPago, cancellationToken);
 
         if (pago == null)
@@ -53,16 +57,26 @@ public class GetPagoByIdQueryHandler : IRequestHandler<GetPagoByIdQuery, Result<
         var pagoDetalle = new PagoDetalleDTO(
             pago.IdPago,
             pago.IdAlumno,
-            pago.Alumno.Usuario.NombreUsuario,
-            pago.Alumno.Usuario.Correo,
+            pago.Alumno?.Usuario?.NombreUsuario,
+            pago.Alumno?.Usuario?.Correo,
+            pago.Alumno?.Usuario?.Telefono,
+            pago.Alumno?.AvatarUrl,
             pago.FechaPago,
             pago.MontoTotal,
             pago.IdMetodoPago,
             pago.MetodoPago.Nombre,
+            pago.ReferenciaTransferencia,
             pago.Nota,
+            pago.EstadoPago.Nombre,
+            pago.UrlComprobante,
+            pago.NotasVerificacion,
+            pago.FechaVerificacion,
+            pago.UsuarioVerificacion,
             pago.FechaCreacion,
             pago.Paquetes.Select(paq => new PaqueteResumenDTO(
                 paq.IdPaquete,
+                paq.IdAlumno,
+                paq.Alumno.Usuario.NombreUsuario,
                 paq.TipoPaquete.Nombre,
                 paq.ClasesDisponibles,
                 paq.ClasesUsadas,

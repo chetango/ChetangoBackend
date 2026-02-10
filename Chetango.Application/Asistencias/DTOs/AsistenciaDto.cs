@@ -5,12 +5,14 @@ public record AsistenciaDto(
     Guid IdAsistencia,
     Guid IdClase,
     DateTime FechaClase,
-    TimeSpan HoraInicio,
-    TimeSpan HoraFin,
+    string HoraInicio,
+    string HoraFin,
     string TipoClase,
     Guid IdAlumno,
     string NombreAlumno,
     string EstadoAsistencia,
-    Guid IdPaqueteUsado,
+    Guid? IdPaqueteUsado, // Nullable: null = clase sin paquete
+    int IdTipoAsistencia, // Tipo de asistencia (Normal, Cortesía, Clase de Prueba, Recuperación)
+    string TipoAsistencia, // Nombre del tipo de asistencia
     string? Observacion
 );

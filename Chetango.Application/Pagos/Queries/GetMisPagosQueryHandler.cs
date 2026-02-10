@@ -37,6 +37,7 @@ public class GetMisPagosQueryHandler : IRequestHandler<GetMisPagosQuery, Result<
         var query = _db.Set<Pago>()
             .Include(p => p.MetodoPago)
             .Include(p => p.Alumno)
+            .Include(p => p.EstadoPago)
             .Include(p => p.Paquetes)
             .Where(p => p.IdAlumno == alumno.IdAlumno);
 
@@ -68,6 +69,12 @@ public class GetMisPagosQueryHandler : IRequestHandler<GetMisPagosQuery, Result<
                 p.MontoTotal,
                 p.MetodoPago.Nombre,
                 p.Alumno.Usuario.NombreUsuario,
+                p.EstadoPago.Nombre,
+                p.UrlComprobante,
+                p.ReferenciaTransferencia,
+                p.NotasVerificacion,
+                p.FechaVerificacion,
+                p.UsuarioVerificacion,
                 p.Paquetes.Count
             ))
             .ToListAsync(cancellationToken);

@@ -21,20 +21,15 @@ public class GetClasesDeProfesorQueryHandler : IRequestHandler<GetClasesDeProfes
         if (profesor is null)
             return Result<PaginatedList<ClaseDTO>>.Failure("El profesor especificado no existe.");
 
-        // 2. Validación de ownership: Profesor solo puede ver sus clases
-        if (!request.EsAdmin)
-        {
-            if (profesor.IdUsuario.ToString() != request.IdUsuarioActual)
-                return Result<PaginatedList<ClaseDTO>>.Failure("No tienes permiso para ver las clases de otro profesor.");
-        }
-
-        // 3. Construir query con filtros
+        // 2. Construir query con filtros
+        // Buscar clases donde el profesor esté asignado (Principal o Monitor)
         var query = _db.Set<Chetango.Domain.Entities.Clase>()
             .Include(c => c.TipoClase)
             .Include(c => c.ProfesorPrincipal)
                 .ThenInclude(p => p.Usuario)
             .Include(c => c.Asistencias)
-            .Where(c => c.IdProfesorPrincipal == request.IdProfesor);
+            .Include(c => c.Profesores) // Incluir todos los profesores asignados
+            .Where(c => c.Profesores.Any(cp => cp.IdProfesor == request.IdProfesor));
 
         // Filtro por rango de fechas
         if (request.FechaDesde.HasValue)
@@ -46,10 +41,10 @@ public class GetClasesDeProfesorQueryHandler : IRequestHandler<GetClasesDeProfes
         // Ordenar por fecha descendente
         query = query.OrderByDescending(c => c.Fecha).ThenByDescending(c => c.HoraInicio);
 
-        // 4. Contar total de registros
+        // 3. Contar total de registros
         var totalCount = await query.CountAsync(cancellationToken);
 
-        // 5. Aplicar paginación
+        // 4. Aplicar paginación
         var items = await query
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
@@ -61,7 +56,9 @@ public class GetClasesDeProfesorQueryHandler : IRequestHandler<GetClasesDeProfes
                 c.TipoClase.Nombre,
                 c.IdProfesorPrincipal,
                 c.ProfesorPrincipal.NombreCompleto,
-                c.Asistencias.Count
+                c.CupoMaximo,
+                c.Asistencias.Count,
+                c.Estado
             ))
             .ToListAsync(cancellationToken);
 

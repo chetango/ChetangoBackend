@@ -1,6 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
+    <PackageReference Include="QuestPDF" Version="2025.12.2" />
+    <PackageReference Include="Twilio" Version="7.14.2" />
     <ProjectReference Include="..\Chetango.Domain\Chetango.Domain.csproj" />
     <!-- Usar MediatR 11.1.0 para compatibilidad con el paquete de DI 11.1.0 -->
     <PackageReference Include="MediatR" Version="11.1.0" />

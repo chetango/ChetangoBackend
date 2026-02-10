@@ -5,5 +5,7 @@ public record AlumnoDTO(
     Guid IdAlumno,
     Guid IdUsuario,
     string Nombre,
-    string Correo
+    string Correo,
+    string? NumeroDocumento = null,
+    string? Telefono = null
 );

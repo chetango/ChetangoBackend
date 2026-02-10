@@ -28,6 +28,21 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AlertasPaquete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContactoEmergenciaNombre")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContactoEmergenciaRelacion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContactoEmergenciaTelefono")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("FechaInscripcion")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -40,6 +55,12 @@ namespace Chetango.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("IdUsuario")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("NotificacionesEmail")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RecordatoriosClase")
+                        .HasColumnType("bit");
 
                     b.HasKey("IdAlumno");
 
@@ -97,6 +118,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<int>("CupoMaximo")
                         .HasColumnType("int");
 
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Programada");
+
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
@@ -106,7 +134,7 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<TimeSpan>("HoraInicio")
                         .HasColumnType("time");
 
-                    b.Property<Guid>("IdProfesorPrincipal")
+                    b.Property<Guid?>("IdProfesorPrincipal")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("IdTipoClase")
@@ -124,6 +152,127 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("Fecha", "IdTipoClase");
 
                     b.ToTable("Clases", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.ClaseProfesor", b =>
+                {
+                    b.Property<Guid>("IdClaseProfesor")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AprobadoPorIdUsuario")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConceptoAdicional")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("EstadoPago")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pendiente");
+
+                    b.Property<DateTime?>("FechaAprobacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaPago")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdClase")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdProfesor")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdRolEnClase")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("TarifaProgramada")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalPago")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ValorAdicional")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.HasKey("IdClaseProfesor");
+
+                    b.HasIndex("AprobadoPorIdUsuario");
+
+                    b.HasIndex("EstadoPago");
+
+                    b.HasIndex("FechaAprobacion");
+
+                    b.HasIndex("IdProfesor");
+
+                    b.HasIndex("IdRolEnClase");
+
+                    b.HasIndex("IdClase", "IdProfesor");
+
+                    b.ToTable("ClasesProfesores", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.CodigoReferido", b =>
+                {
+                    b.Property<Guid>("IdCodigo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("BeneficioNuevoAlumno")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("BeneficioReferidor")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdAlumno")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("VecesUsado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("IdCodigo");
+
+                    b.HasIndex("Activo");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("IdAlumno");
+
+                    b.ToTable("CodigosReferido", (string)null);
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.ConfiguracionNotificaciones", b =>
@@ -178,6 +327,12 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("Confirmado")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("FechaConfirmacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("datetime2");
 
@@ -195,8 +350,11 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<int>("IdEstado")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("IdPaqueteUsado")
+                    b.Property<Guid?>("IdPaqueteUsado")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("IdTipoAsistencia")
+                        .HasColumnType("int");
 
                     b.Property<string>("Observacion")
                         .HasMaxLength(500)
@@ -220,6 +378,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("IdEstado");
 
                     b.HasIndex("IdPaqueteUsado");
+
+                    b.HasIndex("IdTipoAsistencia");
 
                     b.HasIndex("IdClase", "IdAlumno")
                         .IsUnique();
@@ -352,6 +512,40 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                             Id = 3,
                             Nombre = "Leida"
                         });
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.Estados.EstadoPago", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Descripcion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UsuarioCreacion")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UsuarioModificacion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EstadosPago");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Estados.EstadoPaquete", b =>
@@ -586,11 +780,31 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AlertasCambios")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Biografia")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Especialidades")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("IdTipoProfesor")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("IdUsuario")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("NotificacionesEmail")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RecordatoriosClase")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("TarifaActual")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.HasKey("IdProfesor");
 
@@ -745,10 +959,27 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Descripcion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DiasVigencia")
+                        .HasColumnType("int");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("NumeroClases")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Precio")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -761,17 +992,29 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777777"),
-                            Nombre = "Mensual"
+                            Activo = true,
+                            DiasVigencia = 30,
+                            Nombre = "Mensual",
+                            NumeroClases = 0,
+                            Precio = 0m
                         },
                         new
                         {
                             Id = new Guid("88888888-8888-8888-8888-888888888888"),
-                            Nombre = "BonoClases"
+                            Activo = true,
+                            DiasVigencia = 0,
+                            Nombre = "BonoClases",
+                            NumeroClases = 0,
+                            Precio = 0m
                         },
                         new
                         {
                             Id = new Guid("99999999-9999-9999-9999-999999999999"),
-                            Nombre = "Ilimitado"
+                            Activo = true,
+                            DiasVigencia = 30,
+                            Nombre = "Ilimitado",
+                            NumeroClases = 0,
+                            Precio = 0m
                         });
                 });
 
@@ -804,6 +1047,145 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                             Id = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
                             Nombre = "Monitor"
                         });
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.Evento", b =>
+                {
+                    b.Property<Guid>("IdEvento")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("Destacado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeSpan?>("Hora")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("IdUsuarioCreador")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ImagenNombre")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ImagenUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal?>("Precio")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("TipoAudiencia")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("IdEvento");
+
+                    b.HasIndex("Activo");
+
+                    b.HasIndex("Destacado");
+
+                    b.HasIndex("Fecha");
+
+                    b.HasIndex("IdUsuarioCreador");
+
+                    b.ToTable("Eventos", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.LiquidacionMensual", b =>
+                {
+                    b.Property<Guid>("IdLiquidacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Año")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("CreadoPorIdUsuario")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("EnProceso");
+
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaPago")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdProfesor")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Mes")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("TotalAdicionales")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("TotalBase")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TotalClases")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalHoras")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("TotalPagar")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("IdLiquidacion");
+
+                    b.HasIndex("CreadoPorIdUsuario");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("IdProfesor", "Mes", "Año")
+                        .IsUnique();
+
+                    b.ToTable("LiquidacionesMensuales", (string)null);
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.MonitorClase", b =>
@@ -845,7 +1227,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("FechaPago")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("IdAlumno")
+                    b.Property<DateTime?>("FechaVerificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("IdAlumno")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdEstadoPago")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("IdMetodoPago")
@@ -855,6 +1243,15 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Nota")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NotasVerificacion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReferenciaTransferencia")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UrlComprobante")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UsuarioCreacion")
@@ -868,13 +1265,272 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("UsuarioVerificacion")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("IdPago");
 
                     b.HasIndex("IdAlumno");
 
+                    b.HasIndex("IdEstadoPago");
+
                     b.HasIndex("IdMetodoPago");
 
                     b.ToTable("Pagos", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.SolicitudClasePrivada", b =>
+                {
+                    b.Property<Guid>("IdSolicitud")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pendiente");
+
+                    b.Property<DateTime?>("FechaPreferida")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRespuesta")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaSolicitud")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeSpan?>("HoraPreferida")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("IdAlumno")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IdClaseCreada")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IdTipoClaseDeseado")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IdUsuarioRespondio")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MensajeRespuesta")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ObservacionesAlumno")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("TipoClaseDeseado")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("IdSolicitud");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("FechaSolicitud");
+
+                    b.HasIndex("IdAlumno");
+
+                    b.ToTable("SolicitudesClasePrivada", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.SolicitudRenovacionPaquete", b =>
+                {
+                    b.Property<Guid>("IdSolicitud")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pendiente");
+
+                    b.Property<DateTime?>("FechaRespuesta")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaSolicitud")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdAlumno")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IdPaqueteActual")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IdPaqueteCreado")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IdTipoPaqueteDeseado")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("IdUsuarioRespondio")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MensajeAlumno")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("MensajeRespuesta")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("TipoPaqueteDeseado")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("IdSolicitud");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("FechaSolicitud");
+
+                    b.HasIndex("IdAlumno");
+
+                    b.ToTable("SolicitudesRenovacionPaquete", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.TipoAsistencia", b =>
+                {
+                    b.Property<int>("IdTipoAsistencia")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdTipoAsistencia"));
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("DescontarClase")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("RequierePaquete")
+                        .HasColumnType("bit");
+
+                    b.HasKey("IdTipoAsistencia");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("TiposAsistencia", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            IdTipoAsistencia = 1,
+                            Activo = true,
+                            DescontarClase = true,
+                            Descripcion = "Asistencia normal con paquete activo",
+                            Nombre = "Normal",
+                            RequierePaquete = true
+                        },
+                        new
+                        {
+                            IdTipoAsistencia = 2,
+                            Activo = true,
+                            DescontarClase = false,
+                            Descripcion = "Clase de cortesía sin descuento de paquete",
+                            Nombre = "Cortesía",
+                            RequierePaquete = false
+                        },
+                        new
+                        {
+                            IdTipoAsistencia = 3,
+                            Activo = true,
+                            DescontarClase = false,
+                            Descripcion = "Clase de prueba para nuevos alumnos",
+                            Nombre = "Clase de Prueba",
+                            RequierePaquete = false
+                        },
+                        new
+                        {
+                            IdTipoAsistencia = 4,
+                            Activo = true,
+                            DescontarClase = false,
+                            Descripcion = "Clase de recuperación por inasistencia justificada",
+                            Nombre = "Recuperación",
+                            RequierePaquete = true
+                        });
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.UsoCodigoReferido", b =>
+                {
+                    b.Property<Guid>("IdUso")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("BeneficioAplicadoNuevo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("BeneficioAplicadoReferidor")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pendiente");
+
+                    b.Property<DateTime?>("FechaBeneficioNuevo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaBeneficioReferidor")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaUso")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdAlumnoNuevo")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdAlumnoReferidor")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdCodigoReferido")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("IdUso");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("FechaUso");
+
+                    b.HasIndex("IdAlumnoNuevo");
+
+                    b.HasIndex("IdAlumnoReferidor");
+
+                    b.HasIndex("IdCodigoReferido");
+
+                    b.ToTable("UsosCodigoReferido", (string)null);
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Usuario", b =>
@@ -967,8 +1623,7 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasOne("Chetango.Domain.Entities.Estados.Profesor", "ProfesorPrincipal")
                         .WithMany("Clases")
                         .HasForeignKey("IdProfesorPrincipal")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Chetango.Domain.Entities.Estados.TipoClase", "TipoClase")
                         .WithMany("Clases")
@@ -979,6 +1634,51 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Navigation("ProfesorPrincipal");
 
                     b.Navigation("TipoClase");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.ClaseProfesor", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Usuario", "AprobadoPor")
+                        .WithMany()
+                        .HasForeignKey("AprobadoPorIdUsuario")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Chetango.Domain.Entities.Clase", "Clase")
+                        .WithMany("Profesores")
+                        .HasForeignKey("IdClase")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chetango.Domain.Entities.Estados.Profesor", "Profesor")
+                        .WithMany("ClasesProfesores")
+                        .HasForeignKey("IdProfesor")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chetango.Domain.Entities.Estados.RolEnClase", "RolEnClase")
+                        .WithMany()
+                        .HasForeignKey("IdRolEnClase")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AprobadoPor");
+
+                    b.Navigation("Clase");
+
+                    b.Navigation("Profesor");
+
+                    b.Navigation("RolEnClase");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.CodigoReferido", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Alumno", "Alumno")
+                        .WithMany()
+                        .HasForeignKey("IdAlumno")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Alumno");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.CongelacionPaquete", b =>
@@ -1015,6 +1715,11 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasOne("Chetango.Domain.Entities.Estados.Paquete", "PaqueteUsado")
                         .WithMany()
                         .HasForeignKey("IdPaqueteUsado")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Chetango.Domain.Entities.TipoAsistencia", "TipoAsistencia")
+                        .WithMany()
+                        .HasForeignKey("IdTipoAsistencia")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1025,6 +1730,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Navigation("Estado");
 
                     b.Navigation("PaqueteUsado");
+
+                    b.Navigation("TipoAsistencia");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Estados.Notificacion", b =>
@@ -1122,6 +1829,36 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Navigation("TipoProfesor");
                 });
 
+            modelBuilder.Entity("Chetango.Domain.Entities.Evento", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Usuario", "UsuarioCreador")
+                        .WithMany()
+                        .HasForeignKey("IdUsuarioCreador")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UsuarioCreador");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.LiquidacionMensual", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Usuario", "CreadoPor")
+                        .WithMany()
+                        .HasForeignKey("CreadoPorIdUsuario")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chetango.Domain.Entities.Estados.Profesor", "Profesor")
+                        .WithMany("Liquidaciones")
+                        .HasForeignKey("IdProfesor")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreadoPor");
+
+                    b.Navigation("Profesor");
+                });
+
             modelBuilder.Entity("Chetango.Domain.Entities.MonitorClase", b =>
                 {
                     b.HasOne("Chetango.Domain.Entities.Clase", "Clase")
@@ -1146,6 +1883,11 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasOne("Chetango.Domain.Entities.Alumno", "Alumno")
                         .WithMany("Pagos")
                         .HasForeignKey("IdAlumno")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Chetango.Domain.Entities.Estados.EstadoPago", "EstadoPago")
+                        .WithMany("Pagos")
+                        .HasForeignKey("IdEstadoPago")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1157,7 +1899,58 @@ namespace Chetango.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Alumno");
 
+                    b.Navigation("EstadoPago");
+
                     b.Navigation("MetodoPago");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.SolicitudClasePrivada", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Alumno", "Alumno")
+                        .WithMany()
+                        .HasForeignKey("IdAlumno")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Alumno");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.SolicitudRenovacionPaquete", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Alumno", "Alumno")
+                        .WithMany()
+                        .HasForeignKey("IdAlumno")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Alumno");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.UsoCodigoReferido", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Alumno", "AlumnoNuevo")
+                        .WithMany()
+                        .HasForeignKey("IdAlumnoNuevo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chetango.Domain.Entities.Alumno", "AlumnoReferidor")
+                        .WithMany()
+                        .HasForeignKey("IdAlumnoReferidor")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chetango.Domain.Entities.CodigoReferido", "CodigoReferido")
+                        .WithMany("Usos")
+                        .HasForeignKey("IdCodigoReferido")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AlumnoNuevo");
+
+                    b.Navigation("AlumnoReferidor");
+
+                    b.Navigation("CodigoReferido");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Usuario", b =>
@@ -1191,11 +1984,23 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Navigation("Asistencias");
 
                     b.Navigation("Monitores");
+
+                    b.Navigation("Profesores");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.CodigoReferido", b =>
+                {
+                    b.Navigation("Usos");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Estados.EstadoAlumno", b =>
                 {
                     b.Navigation("Alumnos");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.Estados.EstadoPago", b =>
+                {
+                    b.Navigation("Pagos");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Estados.MetodoPago", b =>
@@ -1211,6 +2016,10 @@ namespace Chetango.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Chetango.Domain.Entities.Estados.Profesor", b =>
                 {
                     b.Navigation("Clases");
+
+                    b.Navigation("ClasesProfesores");
+
+                    b.Navigation("Liquidaciones");
 
                     b.Navigation("MonitorClases");
 

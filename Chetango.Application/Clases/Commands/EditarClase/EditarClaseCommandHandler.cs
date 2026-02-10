@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -62,14 +63,16 @@ public class EditarClaseCommandHandler : IRequestHandler<EditarClaseCommand, Res
         var horaInicioTimeSpan = request.FechaHoraInicio.TimeOfDay;
         var horaFinTimeSpan = fechaHoraFin.TimeOfDay;
         
-        var tieneConflicto = await _db.Set<Chetango.Domain.Entities.Clase>()
-            .Where(c => c.IdProfesorPrincipal == request.IdProfesor
-                     && c.IdClase != request.IdClase // Excluir la clase actual
-                     && c.Fecha == request.FechaHoraInicio.Date)
-            .AnyAsync(c => 
-                (horaInicioTimeSpan >= c.HoraInicio && horaInicioTimeSpan < c.HoraFin) ||
-                (horaFinTimeSpan > c.HoraInicio && horaFinTimeSpan <= c.HoraFin) ||
-                (horaInicioTimeSpan <= c.HoraInicio && horaFinTimeSpan >= c.HoraFin),
+        // Buscar si el profesor tiene alguna clase en ese horario (en cualquier rol), excluyendo la clase actual
+        var tieneConflicto = await _db.Set<ClaseProfesor>()
+            .Include(cp => cp.Clase)
+            .Where(cp => cp.IdProfesor == request.IdProfesor
+                     && cp.IdClase != request.IdClase // Excluir la clase actual
+                     && cp.Clase.Fecha == request.FechaHoraInicio.Date)
+            .AnyAsync(cp => 
+                (horaInicioTimeSpan >= cp.Clase.HoraInicio && horaInicioTimeSpan < cp.Clase.HoraFin) ||
+                (horaFinTimeSpan > cp.Clase.HoraInicio && horaFinTimeSpan <= cp.Clase.HoraFin) ||
+                (horaInicioTimeSpan <= cp.Clase.HoraInicio && horaFinTimeSpan >= cp.Clase.HoraFin),
                 cancellationToken);
 
         if (tieneConflicto)

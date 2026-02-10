@@ -31,17 +31,26 @@ public class ActualizarEstadoAsistenciaCommandHandler : IRequestHandler<Actualiz
         var estadoAnterior = asistencia.IdEstado;
         var nuevoEstado = request.NuevoEstado;
 
-        if (estadoAnterior == 1 && nuevoEstado != 1) // Era Presente, ya no lo es
+        // Solo actualizar paquete si existe (no es clase de cortesía)
+        if (asistencia.PaqueteUsado is not null)
         {
-            if (asistencia.PaqueteUsado.ClasesUsadas > 0)
-                asistencia.PaqueteUsado.ClasesUsadas--;
-        }
-        else if (estadoAnterior != 1 && nuevoEstado == 1) // No era Presente, ahora sí
-        {
-            if (asistencia.PaqueteUsado.ClasesUsadas >= asistencia.PaqueteUsado.ClasesDisponibles)
-                return Result<Unit>.Failure("El paquete no tiene clases disponibles para marcar como Presente.");
+            if (estadoAnterior == 1 && nuevoEstado != 1) // Era Presente, ya no lo es
+            {
+                if (asistencia.PaqueteUsado.ClasesUsadas > 0)
+                    asistencia.PaqueteUsado.ClasesUsadas--;
+            }
+            else if (estadoAnterior != 1 && nuevoEstado == 1) // No era Presente, ahora sí
+            {
+                if (asistencia.PaqueteUsado.ClasesUsadas >= asistencia.PaqueteUsado.ClasesDisponibles)
+                    return Result<Unit>.Failure("El paquete no tiene clases disponibles para marcar como Presente.");
 
-            asistencia.PaqueteUsado.ClasesUsadas++;
+                asistencia.PaqueteUsado.ClasesUsadas++;
+            }
+        }
+        else if (estadoAnterior != 1 && nuevoEstado == 1)
+        {
+            // Si es cortesía (sin paquete) y se marca como Presente, no hay validaciones adicionales
+            // Solo permitir el cambio
         }
 
         // 4. Actualizar estado y observación

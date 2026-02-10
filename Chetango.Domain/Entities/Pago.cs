@@ -5,14 +5,23 @@ namespace Chetango.Domain.Entities
     {
         public Guid IdPago { get; set; }
 
-        public Guid IdAlumno { get; set; }
-        public Alumno Alumno { get; set; } = null!;
+        public Guid? IdAlumno { get; set; }
+        public Alumno? Alumno { get; set; }
 
         public DateTime FechaPago { get; set; }
         public decimal MontoTotal { get; set; }
         public Guid IdMetodoPago { get; set; }
         public MetodoPago MetodoPago { get; set; } = null!;
         public string? Nota { get; set; }
+
+        // Verificación de pagos
+        public Guid IdEstadoPago { get; set; }
+        public EstadoPago EstadoPago { get; set; } = null!;
+        public string? UrlComprobante { get; set; }
+        public string? ReferenciaTransferencia { get; set; }
+        public string? NotasVerificacion { get; set; }
+        public DateTime? FechaVerificacion { get; set; }
+        public string? UsuarioVerificacion { get; set; }
 
         // Campos de auditoría
         public DateTime FechaCreacion { get; set; }

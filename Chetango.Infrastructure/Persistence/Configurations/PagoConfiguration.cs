@@ -37,5 +37,10 @@ public class PagoConfiguration : IEntityTypeConfiguration<Pago>
             .WithMany(mp => mp.Pagos)
             .HasForeignKey(p => p.IdMetodoPago)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(p => p.EstadoPago)
+            .WithMany(e => e.Pagos)
+            .HasForeignKey(p => p.IdEstadoPago)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

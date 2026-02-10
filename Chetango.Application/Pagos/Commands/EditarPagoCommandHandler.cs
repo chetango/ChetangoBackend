@@ -41,7 +41,7 @@ public class EditarPagoCommandHandler : IRequestHandler<EditarPagoCommand, Resul
         pago.MontoTotal = request.MontoTotal;
         pago.IdMetodoPago = request.IdMetodoPago;
         pago.Nota = request.Nota;
-        pago.FechaModificacion = DateTime.UtcNow;
+        pago.FechaModificacion = DateTimeHelper.Now;
         pago.UsuarioModificacion = "Sistema";
 
         await _db.SaveChangesAsync(cancellationToken);

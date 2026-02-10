@@ -19,6 +19,15 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
+    "http-qa": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5194",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "QA"
+      }
+    },
     "https-qa": {
       "commandName": "Project",
       "dotnetRunMessages": true,

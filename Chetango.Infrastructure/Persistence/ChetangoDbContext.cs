@@ -19,8 +19,11 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<Asistencia> Asistencias => Set<Asistencia>();
         public DbSet<Auditoria> Auditorias => Set<Auditoria>();
         public DbSet<Clase> Clases => Set<Clase>();
+        public DbSet<ClaseProfesor> ClasesProfesores => Set<ClaseProfesor>();
         public DbSet<ConfiguracionNotificaciones> ConfiguracionesNotificaciones => Set<ConfiguracionNotificaciones>();
         public DbSet<CongelacionPaquete> CongelacionesPaquete => Set<CongelacionPaquete>();
+        public DbSet<Evento> Eventos => Set<Evento>();
+        public DbSet<LiquidacionMensual> LiquidacionesMensuales => Set<LiquidacionMensual>();
         public DbSet<MonitorClase> MonitoresClase => Set<MonitorClase>();
         public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
         public DbSet<Pago> Pagos => Set<Pago>();
@@ -28,17 +31,23 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<Profesor> Profesores => Set<Profesor>();
         public DbSet<TarifaProfesor> TarifasProfesor => Set<TarifaProfesor>();
         public DbSet<Usuario> Usuarios => Set<Usuario>();
+        public DbSet<SolicitudRenovacionPaquete> SolicitudesRenovacionPaquete => Set<SolicitudRenovacionPaquete>();
+        public DbSet<SolicitudClasePrivada> SolicitudesClasePrivada => Set<SolicitudClasePrivada>();
+        public DbSet<CodigoReferido> CodigosReferido => Set<CodigoReferido>();
+        public DbSet<UsoCodigoReferido> UsosCodigoReferido => Set<UsoCodigoReferido>();
 
         // Estados y tipos
         public DbSet<EstadoAlumno> EstadosAlumno => Set<EstadoAlumno>();
         public DbSet<EstadoAsistencia> EstadosAsistencia => Set<EstadoAsistencia>();
         public DbSet<EstadoUsuario> EstadosUsuario => Set<EstadoUsuario>();
         public DbSet<EstadoPaquete> EstadosPaquete => Set<EstadoPaquete>();
+        public DbSet<EstadoPago> EstadosPago => Set<EstadoPago>();
         public DbSet<EstadoNotificacion> EstadosNotificacion => Set<EstadoNotificacion>();
         public DbSet<TipoDocumento> TiposDocumento => Set<TipoDocumento>();
         public DbSet<TipoClase> TiposClase => Set<TipoClase>();
         public DbSet<TipoPaquete> TiposPaquete => Set<TipoPaquete>();
         public DbSet<TipoProfesor> TiposProfesor => Set<TipoProfesor>();
+        public DbSet<TipoAsistencia> TiposAsistencia => Set<TipoAsistencia>();
         public DbSet<RolEnClase> RolesEnClase => Set<RolEnClase>();
         public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
 

@@ -16,15 +16,20 @@ public enum EstadoAsistenciaAdmin
 
 public sealed class PaqueteAlumnoAdminDto
 {
+    public Guid? IdPaquete { get; init; }  // ID del paquete para poder registrar asistencias
     public EstadoPaqueteAdmin Estado { get; init; }
     public string Descripcion { get; init; } = null!;
     public int? ClasesTotales { get; init; }
     public int? ClasesUsadas { get; init; }
     public int? ClasesRestantes { get; init; }
+    public bool EsCompartido { get; init; }  // Indica si es un paquete compartido
+    public List<Guid>? IdsAlumnosCompartidos { get; init; }  // IDs de alumnos en el paquete compartido
+    public List<string>? NombresAlumnosCompartidos { get; init; }  // Nombres de alumnos en el paquete compartido
 }
 
 public sealed class AsistenciaAlumnoAdminDto
 {
+    public Guid? IdAsistencia { get; init; }  // Nullable: null si no hay asistencia registrada aún
     public EstadoAsistenciaAdmin Estado { get; init; }
     public string? Observacion { get; init; }
 }

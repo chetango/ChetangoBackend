@@ -24,7 +24,13 @@ public class AsistenciaConfiguration : IEntityTypeConfiguration<Asistencia>
         builder.HasOne(a => a.PaqueteUsado)
             .WithMany()
             .HasForeignKey(a => a.IdPaqueteUsado)
+            .IsRequired(false) // Opcional: null cuando no se usa paquete
             .OnDelete(DeleteBehavior.Restrict); // Evita borrar paquete si existe asistencia referenciándolo
+
+        builder.HasOne(a => a.TipoAsistencia)
+            .WithMany()
+            .HasForeignKey(a => a.IdTipoAsistencia)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(a => a.Estado)
             .WithMany()

@@ -22,40 +22,57 @@ public class GetClaseByIdQueryHandler : IRequestHandler<GetClaseByIdQuery, Resul
                 .ThenInclude(m => m.Profesor)
                     .ThenInclude(p => p.Usuario)
             .Include(c => c.Asistencias)
+            .Include(c => c.Profesores)
+                .ThenInclude(cp => cp.Profesor)
+                    .ThenInclude(p => p.Usuario)
+            .Include(c => c.Profesores)
+                .ThenInclude(cp => cp.RolEnClase)
             .FirstOrDefaultAsync(c => c.IdClase == request.IdClase, cancellationToken);
 
         if (clase is null)
             return Result<ClaseDetalleDTO>.Failure("La clase especificada no existe.");
 
-        // 2. Validación de ownership: Profesor solo puede ver sus clases
-        // (Los alumnos pueden ver clases donde están inscritos, pero eso requeriría otra validación)
+        // 2. Validación de ownership: Profesor solo puede ver clases donde esté asignado
         if (!request.EsAdmin)
         {
-            if (clase.ProfesorPrincipal.IdUsuario.ToString() != request.IdUsuarioActual)
-            {
-                // Verificar si es monitor de la clase
-                var esMonitor = clase.Monitores.Any(m => m.Profesor.IdUsuario.ToString() == request.IdUsuarioActual);
-                if (!esMonitor)
-                    return Result<ClaseDetalleDTO>.Failure("No tienes permiso para ver esta clase.");
-            }
+            if (string.IsNullOrWhiteSpace(request.IdUsuarioActual))
+                return Result<ClaseDetalleDTO>.Failure("No se pudo identificar al usuario.");
+            
+            var estaAsignado = clase.Profesores.Any(cp => cp.Profesor.IdUsuario.ToString() == request.IdUsuarioActual);
+            if (!estaAsignado)
+                return Result<ClaseDetalleDTO>.Failure("No tienes permiso para ver esta clase.");
         }
 
-        // 3. Proyectar a DTO
+        // 3. Proyectar a DTO con todos los profesores
+        var profesoresDto = clase.Profesores
+            .Select(cp => new ProfesorClaseDTO(
+                cp.IdProfesor,
+                cp.Profesor.NombreCompleto,
+                cp.RolEnClase.Nombre
+            ))
+            .ToList();
+        
+        // Para retrocompatibilidad, obtener el primer profesor principal
+        var primerPrincipal = clase.Profesores
+            .FirstOrDefault(cp => cp.RolEnClase.Nombre == "Principal");
+        
         var dto = new ClaseDetalleDTO(
             clase.IdClase,
             clase.Fecha,
             clase.HoraInicio,
             clase.HoraFin,
             clase.TipoClase.Nombre,
-            clase.IdProfesorPrincipal,
-            clase.ProfesorPrincipal.NombreCompleto,
+            primerPrincipal?.IdProfesor, // Retrocompatibilidad
+            primerPrincipal?.Profesor.NombreCompleto ?? "Sin profesor", // Retrocompatibilidad
             clase.CupoMaximo,
             clase.Observaciones,
             clase.Asistencias.Count,
-            clase.Monitores.Select(m => new MonitorClaseDTO(
+            clase.Monitores.Select(m => new MonitorClaseDTO( // Retrocompatibilidad
                 m.IdProfesor,
                 m.Profesor.NombreCompleto
-            )).ToList()
+            )).ToList(),
+            profesoresDto, // NUEVO: Lista completa con roles
+            clase.Estado
         );
 
         return Result<ClaseDetalleDTO>.Success(dto);
