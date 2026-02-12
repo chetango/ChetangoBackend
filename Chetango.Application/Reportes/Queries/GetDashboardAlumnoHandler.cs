@@ -112,20 +112,28 @@ public class GetDashboardAlumnoHandler : IRequestHandler<GetDashboardAlumnoQuery
         // 4. ESTADÍSTICAS DE ASISTENCIA
         // ==========================================
         var todasAsistencias = await _db.Asistencias
-            .Include(a => a.Estado)
-            .Include(a => a.Clase)
             .Where(a => a.IdAlumno == alumno.IdAlumno)
+            .Select(a => new
+            {
+                a.IdAsistencia,
+                a.IdAlumno,
+                EstadoNombre = a.Estado.Nombre,
+                FechaClase = a.Clase.Fecha
+            })
             .ToListAsync(cancellationToken);
 
-        var clasesTomadas = todasAsistencias.Count(a => a.Estado.Nombre == "Presente");
+        var clasesTomadas = todasAsistencias.Count(a => a.EstadoNombre == "Presente");
         var totalAsistencias = todasAsistencias.Count;
         var porcentajeAsistencia = totalAsistencias > 0 
             ? (decimal)clasesTomadas / totalAsistencias * 100 
             : 0;
 
         // Calcular racha (semanas consecutivas con al menos 1 clase)
-        var asistenciasPresentes = todasAsistencias.Where(a => a.Estado.Nombre == "Presente").ToList();
-        var racha = CalcularRacha(asistenciasPresentes);
+        var fechasAsistencias = todasAsistencias
+            .Where(a => a.EstadoNombre == "Presente")
+            .Select(a => a.FechaClase)
+            .ToList();
+        var racha = CalcularRachaSinEntidad(fechasAsistencias);
 
         var asistenciaDTO = new AsistenciaAlumnoDTO
         {
@@ -154,9 +162,9 @@ public class GetDashboardAlumnoHandler : IRequestHandler<GetDashboardAlumnoQuery
         // Logro: Progreso (10 clases en un mes)
         var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
         var clasesEsteMes = todasAsistencias.Count(a => 
-            a.Estado.Nombre == "Presente" && 
-            a.Clase.Fecha >= inicioMes && 
-            a.Clase.Fecha <= hoy);
+            a.EstadoNombre == "Presente" && 
+            a.FechaClase >= inicioMes &&
+            a.FechaClase <= hoy);
         
         logros.Add(new LogroDTO
         {
@@ -207,13 +215,13 @@ public class GetDashboardAlumnoHandler : IRequestHandler<GetDashboardAlumnoQuery
     /// <summary>
     /// Calcula la racha de semanas consecutivas con al menos 1 clase
     /// </summary>
-    private int CalcularRacha(List<Asistencia> asistenciasPresentes)
+    private int CalcularRachaSinEntidad(List<DateTime> fechasClases)
     {
-        if (!asistenciasPresentes.Any())
+        if (!fechasClases.Any())
             return 0;
 
-        var fechasClases = asistenciasPresentes
-            .Select(a => a.Clase.Fecha.Date)
+        var fechasDistintas = fechasClases
+            .Select(f => f.Date)
             .Distinct()
             .OrderByDescending(f => f)
             .ToList();
@@ -224,7 +232,7 @@ public class GetDashboardAlumnoHandler : IRequestHandler<GetDashboardAlumnoQuery
         int racha = 0;
         var semanasConClase = new HashSet<DateTime>();
 
-        foreach (var fecha in fechasClases)
+        foreach (var fecha in fechasDistintas)
         {
             var inicioSemanaDeFecha = fecha.AddDays(-(int)fecha.DayOfWeek);
             semanasConClase.Add(inicioSemanaDeFecha);

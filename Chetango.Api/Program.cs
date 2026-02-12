@@ -307,13 +307,14 @@ if (app.Environment.IsDevelopment())
         return Results.Content(html, "text/html");
     }).AllowAnonymous();
 }
+// CORS debe ir ANTES de otros middlewares
+app.UseCors("DefaultCors");
 
 app.UseHttpsRedirection();
 
 // Servir archivos estáticos (imágenes, comprobantes, avatares, etc.)
 app.UseStaticFiles();
 
-app.UseCors("DefaultCors");
 app.UseAuthentication(); // Debe ir antes de Authorization
 app.UseAuthorization();
 
