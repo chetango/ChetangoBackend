@@ -120,3 +120,12 @@ create.sql
 
 ## Uploaded files
 **/wwwroot/uploads/
+
+## Deployment artifacts (temporary)
+publish/
+publish_*/
+*.zip
+create-linux-zip.ps1
+migration-*.sql
+full-migration-script.sql
+!scripts/*.sql

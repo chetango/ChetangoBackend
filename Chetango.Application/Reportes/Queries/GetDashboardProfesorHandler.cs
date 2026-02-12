@@ -34,11 +34,19 @@ public class GetDashboardProfesorHandler : IRequestHandler<GetDashboardProfesorQ
         // ==========================================
         var clasesHoyQuery = await _db.Clases
             .Include(c => c.TipoClase)
-            .Include(c => c.Asistencias)
-                .ThenInclude(a => a.Estado)
             .Where(c => c.IdProfesorPrincipal == profesor.IdProfesor &&
                        c.Fecha.Date == hoy)
             .OrderBy(c => c.HoraInicio)
+            .Select(c => new
+            {
+                c.IdClase,
+                c.TipoClase,
+                c.HoraInicio,
+                c.HoraFin,
+                c.CupoMaximo,
+                c.Fecha,
+                AlumnosPresentes = c.Asistencias.Count(a => a.Estado.Nombre == "Presente")
+            })
             .ToListAsync(cancellationToken);
 
         var ahora = DateTime.Now.TimeOfDay;
@@ -68,13 +76,13 @@ public class GetDashboardProfesorHandler : IRequestHandler<GetDashboardProfesorQ
             {
                 IdClase = c.IdClase,
                 Nombre = c.TipoClase.Nombre,
-                Nivel = "General", // TipoClase no tiene nivel, se puede agregar después si es necesario
+                Nivel = "General",
                 HoraInicio = c.HoraInicio,
                 HoraFin = c.HoraFin,
                 Tipo = c.CupoMaximo == 1 ? "particular" : "grupal",
                 Estado = estado,
                 AlumnosEsperados = c.CupoMaximo,
-                AlumnosPresentes = c.Asistencias.Count(a => a.Estado.Nombre == "Presente"),
+                AlumnosPresentes = c.AlumnosPresentes,
                 MinutosParaInicio = minutosParaInicio
             };
         }).ToList();
@@ -106,23 +114,20 @@ public class GetDashboardProfesorHandler : IRequestHandler<GetDashboardProfesorQ
 
         // Promedio de asistencia últimos 30 días
         var asistenciasUltimos30Dias = await _db.Asistencias
-            .Include(a => a.Clase)
-            .Include(a => a.Estado)
             .Where(a => a.Clase.IdProfesorPrincipal == profesor.IdProfesor &&
                        a.Clase.Fecha >= ultimos30Dias &&
                        a.Clase.Fecha <= hoy)
+            .Select(a => new { EstadoNombre = a.Estado.Nombre })
             .ToListAsync(cancellationToken);
 
         var totalAsistencias = asistenciasUltimos30Dias.Count;
-        var asistenciasPresentes = asistenciasUltimos30Dias.Count(a => a.Estado.Nombre == "Presente");
+        var asistenciasPresentes = asistenciasUltimos30Dias.Count(a => a.EstadoNombre == "Presente");
         var promedioAsistencia = totalAsistencias > 0 
             ? (decimal)asistenciasPresentes / totalAsistencias * 100 
             : 0;
 
         // Alumnos únicos este mes
         var alumnosUnicosMes = await _db.Asistencias
-            .Include(a => a.Clase)
-            .Include(a => a.Estado)
             .Where(a => a.Clase.IdProfesorPrincipal == profesor.IdProfesor &&
                        a.Clase.Fecha >= inicioMes &&
                        a.Clase.Fecha <= hoy &&
@@ -151,15 +156,14 @@ public class GetDashboardProfesorHandler : IRequestHandler<GetDashboardProfesorQ
             var finSem = inicioSem.AddDays(6);
             
             var asistenciasSemana = await _db.Asistencias
-                .Include(a => a.Clase)
-                .Include(a => a.Estado)
                 .Where(a => a.Clase.IdProfesorPrincipal == profesor.IdProfesor &&
                            a.Clase.Fecha >= inicioSem &&
                            a.Clase.Fecha <= finSem)
+                .Select(a => new { EstadoNombre = a.Estado.Nombre })
                 .ToListAsync(cancellationToken);
 
             var total = asistenciasSemana.Count;
-            var presentes = asistenciasSemana.Count(a => a.Estado.Nombre == "Presente");
+            var presentes = asistenciasSemana.Count(a => a.EstadoNombre == "Presente");
             
             var labelSemana = i == 0 ? "Esta sem" : $"Sem {5 - i}";
             
@@ -189,7 +193,6 @@ public class GetDashboardProfesorHandler : IRequestHandler<GetDashboardProfesorQ
         // ==========================================
         var proximasClases = await _db.Clases
             .Include(c => c.TipoClase)
-            .Include(c => c.Asistencias)
             .Where(c => c.IdProfesorPrincipal == profesor.IdProfesor &&
                        c.Fecha > hoy &&
                        c.Fecha <= hoy.AddDays(7))

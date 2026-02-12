@@ -100,6 +100,7 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
 
         var asistenciasHoy = await _db.Asistencias
             .Include(a => a.Estado)
+            .Include(a => a.Clase)
             .CountAsync(a => a.Clase.Fecha == hoy && a.Estado.Nombre == "Presente", cancellationToken);
 
         var asistenciasMes = await _db.Asistencias
@@ -209,10 +210,11 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .Include(a => a.Clase)
             .Include(a => a.Estado)
             .Where(a => a.Clase.Fecha >= fecha30DiasAtras && a.Estado.Nombre == "Presente")
+            .Select(a => new { a.Clase.Fecha.DayOfWeek })
             .ToListAsync(cancellationToken);
 
         var asistenciasPorDia = asistenciasRecientes
-            .GroupBy(a => a.Clase.Fecha.DayOfWeek)
+            .GroupBy(a => a.DayOfWeek)
             .Select(g => new
             {
                 DiaSemana = g.Key,
@@ -364,18 +366,22 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
         }
 
         // Alerta: Alumnos inactivos (sin asistencias en 30 días)
-        var alumnosInactivos = await _db.Alumnos
+        var alumnosConAsistencias = await _db.Alumnos
             .Include(a => a.Usuario)
                 .ThenInclude(u => u.Estado)
-            .Include(a => a.Asistencias)
-                .ThenInclude(ast => ast.Clase)
             .Where(a => a.Usuario.Estado.Nombre == "Activo")
+            .Select(a => new
+            {
+                a.IdAlumno,
+                UltimaFechaAsistencia = a.Asistencias
+                    .OrderByDescending(ast => ast.Clase.Fecha)
+                    .Select(ast => ast.Clase.Fecha)
+                    .FirstOrDefault()
+            })
             .ToListAsync(cancellationToken);
 
-        var cantidadInactivos = alumnosInactivos
-            .Count(a => !a.Asistencias.Any() || 
-                a.Asistencias.OrderByDescending(ast => ast.Clase.Fecha)
-                    .First().Clase.Fecha < fecha30DiasAtras);
+        var cantidadInactivos = alumnosConAsistencias
+            .Count(a => a.UltimaFechaAsistencia == default || a.UltimaFechaAsistencia < fecha30DiasAtras);
 
         if (cantidadInactivos > 0)
         {

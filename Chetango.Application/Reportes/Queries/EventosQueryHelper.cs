@@ -27,6 +27,7 @@ public static class EventosQueryHelper
         return await db.Eventos
             .Where(e => e.Activo &&
                        e.Fecha >= hoy &&
+                       (e.TipoAudiencia == tipoAudiencia || e.TipoAudiencia == "Todos") &&
                        (e.TipoAudiencia == tipoAudiencia || e.TipoAudiencia == "Todos"))
             .OrderBy(e => e.Fecha)
             .Take(3)
