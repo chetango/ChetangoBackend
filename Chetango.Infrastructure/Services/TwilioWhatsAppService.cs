@@ -8,20 +8,25 @@ namespace Chetango.Infrastructure.Services;
 
 public class TwilioWhatsAppService : IWhatsAppService
 {
-    private readonly string _accountSid;
-    private readonly string _authToken;
-    private readonly string _fromWhatsApp;
+    private readonly string? _accountSid;
+    private readonly string? _authToken;
+    private readonly string? _fromWhatsApp;
+    private readonly bool _isConfigured;
 
     public TwilioWhatsAppService(IConfiguration configuration)
     {
-        _accountSid = configuration["Twilio:AccountSid"] 
-            ?? throw new InvalidOperationException("Twilio:AccountSid no configurado");
-        _authToken = configuration["Twilio:AuthToken"] 
-            ?? throw new InvalidOperationException("Twilio:AuthToken no configurado");
-        _fromWhatsApp = configuration["Twilio:WhatsAppFrom"] 
-            ?? throw new InvalidOperationException("Twilio:WhatsAppFrom no configurado");
+        _accountSid = configuration["Twilio:AccountSid"];
+        _authToken = configuration["Twilio:AuthToken"];
+        _fromWhatsApp = configuration["Twilio:WhatsAppFrom"];
 
-        TwilioClient.Init(_accountSid, _authToken);
+        _isConfigured = !string.IsNullOrEmpty(_accountSid) 
+                        && !string.IsNullOrEmpty(_authToken) 
+                        && !string.IsNullOrEmpty(_fromWhatsApp);
+
+        if (_isConfigured)
+        {
+            TwilioClient.Init(_accountSid!, _authToken!);
+        }
     }
 
     public async Task<bool> EnviarNotificacionPagoAprobadoAsync(
@@ -32,6 +37,12 @@ public class TwilioWhatsAppService : IWhatsAppService
         DateTime fechaPago,
         List<string> paquetes)
     {
+        if (!_isConfigured)
+        {
+            Console.WriteLine("WhatsApp no configurado - saltando notificación de pago aprobado");
+            return false;
+        }
+
         try
         {
             // Formatear el número para WhatsApp
@@ -63,6 +74,12 @@ public class TwilioWhatsAppService : IWhatsAppService
         decimal monto,
         string motivo)
     {
+        if (!_isConfigured)
+        {
+            Console.WriteLine("WhatsApp no configurado - saltando notificación de pago rechazado");
+            return false;
+        }
+
         try
         {
             var toWhatsApp = FormatearNumeroWhatsApp(numeroWhatsApp);
