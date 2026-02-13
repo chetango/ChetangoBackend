@@ -506,7 +506,7 @@ app.MapGet("/api/tipos-paquete", async (IMediator mediator) =>
 }).RequireAuthorization("ApiScope");
 
 // POST /api/tipos-paquete - Crear un nuevo tipo de paquete (solo Admin)
-app.MapPost("/api/tipos-paquete", async ([FromBody] CrearTipoPaqueteCommand command, IMediator mediator) =>
+app.MapPost("/api/tipos-paquete", async (CrearTipoPaqueteCommand command, IMediator mediator) =>
 {
     var result = await mediator.Send(command);
     return result.Succeeded 
