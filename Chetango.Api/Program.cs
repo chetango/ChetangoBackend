@@ -20,6 +20,7 @@ using Chetango.Application.Clases.DTOs;
 using Chetango.Application.Alumnos;
 using Chetango.Application.Profesores;
 using Chetango.Application.Paquetes.Commands.CrearPaquete;
+using Chetango.Application.Paquetes.Commands.CrearTipoPaquete;
 using Chetango.Application.Paquetes.Commands.EditarPaquete;
 using Chetango.Application.Paquetes.Commands.CongelarPaquete;
 using Chetango.Application.Paquetes.Commands.DescongelarPaquete;
@@ -503,6 +504,15 @@ app.MapGet("/api/tipos-paquete", async (IMediator mediator) =>
     var result = await mediator.Send(new GetTiposPaqueteQuery());
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("ApiScope");
+
+// POST /api/tipos-paquete - Crear un nuevo tipo de paquete (solo Admin)
+app.MapPost("/api/tipos-paquete", async ([FromBody] CrearTipoPaqueteCommand command, IMediator mediator) =>
+{
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Created($"/api/tipos-paquete/{result.Value}", new { id = result.Value })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
 
 // GET /api/profesores - Obtener todos los profesores (solo Admin)
 app.MapGet("/api/profesores", async (IMediator mediator) =>
