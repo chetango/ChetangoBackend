@@ -1,0 +1,21 @@
+version:v1.0
+Nombre [displayName] Required,Nombre de usuario [userPrincipalName] Required,Contraseña inicial [passwordProfile] Required,Bloquear inicio de sesión (Sí/No) [accountEnabled] Required
+Jorge Padilla,jorge.padilla@corporacionchetango.com,Chetango2026!,No
+Juan Herrera,juan.herrera@corporacionchetango.com,Chetango2026!,No
+Ana Gomez,ana.gomez@corporacionchetango.com,Chetango2026!,No
+Santiago Salazar,santiago.salazar@corporacionchetango.com,Chetango2026!,No
+Maria Ospina,maria.ospina@corporacionchetango.com,Chetango2026!,No
+Susana Alzate,susana.alzate@corporacionchetango.com,Chetango2026!,No
+Branndon Cardenas,branndon.cardenas@corporacionchetango.com,Chetango2026!,No
+Jhonathan Pachon,jhonathan.pachon@corporacionchetango.com,Chetango2026!,No
+Suly Pachon,suly.pachon@corporacionchetango.com,Chetango2026!,No
+Camila Garzon,camila.garzon@corporacionchetango.com,Chetango2026!,No
+Samuel Sanchez,samuel.sanchez@corporacionchetango.com,Chetango2026!,No
+Laura Machado,laura.machado@corporacionchetango.com,Chetango2026!,No
+Yeison Gomez,yeison.gomez@corporacionchetango.com,Chetango2026!,No
+Carolina Molina,carolina.molina@corporacionchetango.com,Chetango2026!,No
+Daniel Cano,daniel.cano@corporacionchetango.com,Chetango2026!,No
+Duglas Risso,duglas.risso@corporacionchetango.com,Chetango2026!,No
+Miguel Ravagli,miguel.ravagli@corporacionchetango.com,Chetango2026!,No
+Maria Barrera,maria.barrera@corporacionchetango.com,Chetango2026!,No
+Luz Ganan,luz.ganan@corporacionchetango.com,Chetango2026!,No
