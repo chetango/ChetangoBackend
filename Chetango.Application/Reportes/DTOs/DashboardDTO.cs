@@ -60,6 +60,8 @@ public class DashboardKPIsDTO
     public int PaquetesVendidos { get; set; }
     public int AsistenciasHoy { get; set; }
     public int AsistenciasMes { get; set; }
+    public decimal EgresosEsteMes { get; set; }
+    public decimal GananciaNeta { get; set; }
     
     /// <summary>
     /// Comparativas con periodo anterior (% de cambio)
@@ -68,6 +70,8 @@ public class DashboardKPIsDTO
     public decimal? ComparativaAsistenciasMesAnterior { get; set; }
     public decimal? ComparativaAlumnosMesAnterior { get; set; }
     public decimal? ComparativaPaquetesVendidosMesAnterior { get; set; }
+    public decimal? ComparativaEgresosMesAnterior { get; set; }
+    public decimal? ComparativaGananciaMesAnterior { get; set; }
 }
 
 /// <summary>

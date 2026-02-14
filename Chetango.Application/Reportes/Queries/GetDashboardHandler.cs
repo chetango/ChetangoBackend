@@ -100,8 +100,7 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
 
         var asistenciasHoy = await _db.Asistencias
             .Include(a => a.Estado)
-            .Include(a => a.Clase)
-            .CountAsync(a => a.Clase.Fecha == hoy && a.Estado.Nombre == "Presente", cancellationToken);
+            .CountAsync(a => a.FechaRegistro.Date == hoy && a.Estado.Nombre == "Presente", cancellationToken);
 
         var asistenciasMes = await _db.Asistencias
             .Include(a => a.Estado)
@@ -150,6 +149,28 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             ? ((paquetesVendidos - paquetesVendidosPeriodoAnterior) / (decimal)paquetesVendidosPeriodoAnterior) * 100 
             : null;
 
+        // Calcular egresos del mes (pagos a profesores)
+        var egresosEsteMes = await _db.LiquidacionesMensuales
+            .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes)
+            .SumAsync(l => l.TotalPagar, cancellationToken);
+
+        var egresosPeriodoAnterior = await _db.LiquidacionesMensuales
+            .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaPeriodoAnterior && l.FechaPago <= ultimoDiaPeriodoAnterior)
+            .SumAsync(l => l.TotalPagar, cancellationToken);
+
+        // Calcular ganancia neta
+        var gananciaNeta = ingresosEsteMes - egresosEsteMes;
+        var gananciaPeriodoAnterior = ingresosPeriodoAnterior - egresosPeriodoAnterior;
+
+        // Comparativas de egresos y ganancia
+        decimal? comparativaEgresos = egresosPeriodoAnterior > 0 
+            ? ((egresosEsteMes - egresosPeriodoAnterior) / egresosPeriodoAnterior) * 100 
+            : null;
+
+        decimal? comparativaGanancia = gananciaPeriodoAnterior != 0 
+            ? ((gananciaNeta - gananciaPeriodoAnterior) / Math.Abs(gananciaPeriodoAnterior)) * 100 
+            : null;
+
         var kpis = new DashboardKPIsDTO
         {
             TotalAlumnosActivos = totalAlumnosActivos,
@@ -161,10 +182,14 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             PaquetesVendidos = paquetesVendidos,
             AsistenciasHoy = asistenciasHoy,
             AsistenciasMes = asistenciasMes,
+            EgresosEsteMes = egresosEsteMes,
+            GananciaNeta = gananciaNeta,
             CrecimientoIngresosMesAnterior = crecimientoIngresos.HasValue ? Math.Round(crecimientoIngresos.Value, 2) : null,
             ComparativaAsistenciasMesAnterior = comparativaAsistencias.HasValue ? Math.Round(comparativaAsistencias.Value, 2) : null,
             ComparativaAlumnosMesAnterior = comparativaAlumnos.HasValue ? Math.Round(comparativaAlumnos.Value, 2) : null,
-            ComparativaPaquetesVendidosMesAnterior = comparativaPaquetes.HasValue ? Math.Round(comparativaPaquetes.Value, 2) : null
+            ComparativaPaquetesVendidosMesAnterior = comparativaPaquetes.HasValue ? Math.Round(comparativaPaquetes.Value, 2) : null,
+            ComparativaEgresosMesAnterior = comparativaEgresos.HasValue ? Math.Round(comparativaEgresos.Value, 2) : null,
+            ComparativaGananciaMesAnterior = comparativaGanancia.HasValue ? Math.Round(comparativaGanancia.Value, 2) : null
         };
 
         // Gráfica de ingresos (últimos 6 meses)
