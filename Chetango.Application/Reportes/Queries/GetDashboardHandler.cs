@@ -98,9 +98,10 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .Include(p => p.Estado)
             .CountAsync(p => p.Estado.Nombre == "Activo" && p.FechaVencimiento <= proximos7Dias, cancellationToken);
 
+        // Contar asistencias registradas hoy (todas, sin filtrar por estado primero para debug)
         var asistenciasHoy = await _db.Asistencias
-            .Include(a => a.Estado)
-            .CountAsync(a => a.FechaRegistro >= hoy && a.FechaRegistro < hoy.AddDays(1) && a.Estado.Nombre == "Presente", cancellationToken);
+            .Where(a => a.FechaRegistro.Date == hoy.Date)
+            .CountAsync(cancellationToken);
 
         var asistenciasMes = await _db.Asistencias
             .Include(a => a.Estado)
