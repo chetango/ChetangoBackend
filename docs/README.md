@@ -30,6 +30,7 @@ Guides for developers working on the project.
 - [Testing](development/testing.md) - Automated testing strategy
 - [Auth Setup](development/auth-setup.md) - Azure AD B2C authentication configuration
 - [Frontend Integration](development/frontend-integration.md) - API integration guidelines
+- **[Responsive Mobile Plan](development/PLAN-RESPONSIVE-MOBILE.md)** - Comprehensive plan for mobile responsive implementation
 
 ## Quick Links
 

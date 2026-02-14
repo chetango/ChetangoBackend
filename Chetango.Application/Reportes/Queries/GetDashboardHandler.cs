@@ -100,7 +100,7 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
 
         var asistenciasHoy = await _db.Asistencias
             .Include(a => a.Estado)
-            .CountAsync(a => a.FechaRegistro.Date == hoy && a.Estado.Nombre == "Presente", cancellationToken);
+            .CountAsync(a => a.FechaRegistro >= hoy && a.FechaRegistro < hoy.AddDays(1) && a.Estado.Nombre == "Presente", cancellationToken);
 
         var asistenciasMes = await _db.Asistencias
             .Include(a => a.Estado)
