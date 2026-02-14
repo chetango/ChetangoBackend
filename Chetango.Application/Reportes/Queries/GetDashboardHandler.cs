@@ -68,7 +68,9 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
 
     private async Task<DashboardDTO> GenerarDashboard(DateTime fechaDesde, DateTime fechaHasta, CancellationToken cancellationToken)
     {
-        var hoy = DateTime.Today;
+        // Usar zona horaria de Colombia (UTC-5)
+        var colombiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+        var hoy = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, colombiaTimeZone).Date;
         var primerDiaMes = fechaDesde;
         var ultimoDiaMes = fechaHasta;
         var proximos7Dias = hoy.AddDays(7);
@@ -98,9 +100,10 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .Include(p => p.Estado)
             .CountAsync(p => p.Estado.Nombre == "Activo" && p.FechaVencimiento <= proximos7Dias, cancellationToken);
 
-        // Contar asistencias registradas hoy (todas, sin filtrar por estado primero para debug)
+        // Contar asistencias registradas hoy con estado "Presente"
         var asistenciasHoy = await _db.Asistencias
-            .Where(a => a.FechaRegistro.Date == hoy.Date)
+            .Include(a => a.Estado)
+            .Where(a => a.FechaRegistro.Date == hoy && a.Estado.Nombre == "Presente")
             .CountAsync(cancellationToken);
 
         var asistenciasMes = await _db.Asistencias
