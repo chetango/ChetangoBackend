@@ -9,19 +9,19 @@
 ## 📊 PROGRESO GENERAL
 
 ```
-Progreso Total: ██████░░░░░░░░░░░░░░ 25%
+Progreso Total: ██████░░░░░░░░░░░░░░ 30%
 
 Fase 0: Setup Base        [✅ COMPLETADA]   ██████████ 100%
-Fase 1: Módulo Alumno     [🟢 EN PROGRESO]  ████░░░░░░ 35%
+Fase 1: Módulo Alumno     [🟢 EN PROGRESO]  ██████░░░░ 60%
 Fase 2: Módulo Profesor   [⚪ PENDIENTE]    ░░░░░░░░░░ 0%
 Fase 3: Módulo Admin      [⚪ PENDIENTE]    ░░░░░░░░░░ 0%
 Fase 4: Componentes Shared[⚪ PENDIENTE]    ░░░░░░░░░░ 0%
 Fase 5: Testing & Polish  [⚪ PENDIENTE]    ░░░░░░░░░░ 0%
 ```
 
-**Días transcurridos:** 2.5 / 36  
-**Fase actual:** 🟢 Fase 1 - Dashboard Alumno responsive  
-**Próximo milestone:** Completar cards restantes del dashboard
+**Días transcurridos:** 3 / 36  
+**Fase actual:** 🟢 Fase 1 - Dashboard Alumno + MainLayout responsive  
+**Próximo milestone:** Completar secciones restantes del dashboard (Logros, Eventos)
 
 ---
 
@@ -539,39 +539,59 @@ src/
 
 #### Componentes a Modificar
 
-##### Día 1: Layout Base Dashboard
-- [ ] **StudentDashboardPage.tsx**
+##### Día 1: Layout Base Dashboard ✅
+- [x] **StudentDashboardPage.tsx**
   - Ajustar padding contenedor: `px-4 sm:px-6 lg:px-12`
   - Ajustar gaps grids: `gap-4 sm:gap-5 lg:gap-6`
   - Validar spacing vertical
+  - **Commit:** 0842a56
 
-##### Día 2: Header y Cards Principales
-- [ ] **AlumnoHeader.tsx**
+##### Día 2: Header y Cards Principales ✅
+- [x] **AlumnoHeader.tsx**
   - Layout flexible: columna en móvil, fila en desktop
   - Card perfil full-width en móvil
   - Typography escalada
+  - **Commit:** 0842a56
   
-- [ ] **CredencialDigitalCard.tsx**
+- [x] **CredencialDigitalCard.tsx**
   - QR size responsivo: 180px → 240px → 280px
   - Padding interno adaptativo
   - Typography del nombre
+  - **Commit:** 0842a56
 
-##### Día 3: Cards de Progreso
-- [ ] **MiPaqueteCard.tsx**
+##### Día 3: Cards de Progreso ✅
+- [x] **MiPaqueteCard.tsx**
   - Progress bar full-width
   - Números grandes legibles
   - Spacing interno optimizado
+  - **Commit:** 793df19
   
-- [ ] **ProximaClaseCard.tsx**
+- [x] **ProximaClaseCard.tsx**
   - Layout vertical en móvil
   - Iconos y texto balanceados
   - Botones touch-friendly (min 44px)
+  - **Commit:** 793df19
   
-- [ ] **MiAsistenciaCard.tsx**
+- [x] **MiAsistenciaCard.tsx**
   - Gráficos responsivos
   - Leyenda apilada en móvil
+  - **Commit:** 793df19
 
-##### Día 4: Secciones Interactivas
+##### Día 3.5: Layout Principal Responsive ✅
+- [x] **MainLayout.tsx + MainLayout.module.scss**
+  - Sidebar responsive con overlay móvil
+  - Hamburger menu en header
+  - Backdrop oscuro con blur
+  - Botón X para cerrar en móvil
+  - Cierre automático al cambiar de ruta
+  - Prevención de scroll del body
+  - Click fuera cierra sidebar
+  - Touch targets 44px mínimo
+  - Animaciones suaves slide-in/out
+  - **Commit:** 18d0354
+  - **Merge:** 2b4f618 (develop)
+
+##### Día 4: Secciones Interactivas 🟡 (Pendiente)
 - [ ] **RecomendadosSection.tsx**
   - Cards en columna en móvil
   - CTA buttons full-width
