@@ -21,15 +21,13 @@ public static class EventosQueryHelper
         string tipoAudiencia,
         CancellationToken cancellationToken)
     {
-        var hoy = DateTime.Today;
         const string imagenPorDefecto = "https://images.unsplash.com/photo-1504609813442-a8924e83f76e?w=400";
 
         return await db.Eventos
             .Where(e => e.Activo &&
-                       e.Fecha >= hoy &&
-                       (e.TipoAudiencia == tipoAudiencia || e.TipoAudiencia == "Todos") &&
                        (e.TipoAudiencia == tipoAudiencia || e.TipoAudiencia == "Todos"))
-            .OrderBy(e => e.Fecha)
+            .OrderByDescending(e => e.Destacado)
+            .ThenBy(e => e.Fecha)
             .Take(3)
             .Select(e => new EventoDTO
             {
