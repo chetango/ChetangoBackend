@@ -1,4 +1,6 @@
 using Chetango.Domain.Entities.Estados;
+using Chetango.Domain.Enums;
+
 namespace Chetango.Domain.Entities
 {
     public class Usuario
@@ -13,6 +15,7 @@ namespace Chetango.Domain.Entities
         public string Telefono { get; set; } = null!;
         public int IdEstadoUsuario { get; set; } // FK explícita
         public EstadoUsuario Estado { get; set; } = null!;
+        public Sede Sede { get; set; } = Sede.Medellin;
         public DateTime FechaCreacion { get; set; }
 
         // Relaciones

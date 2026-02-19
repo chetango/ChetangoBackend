@@ -5,6 +5,7 @@
 using Chetango.Application.Common;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
+using Chetango.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -24,7 +25,9 @@ public record CreateUserCommand(
     string CorreoAzure,
     string ContrasenaTemporalAzure,
     bool EnviarWhatsApp,
-    bool EnviarEmail
+    bool EnviarEmail,
+    Sede? Sede = null, // Opcional: si null, se hereda del usuario creador
+    string? EmailUsuarioCreador = null // Email del admin que crea el usuario
 ) : IRequest<Result<Guid>>;
 
 public record DatosProfesorRequest(
@@ -52,6 +55,17 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 
     public async Task<Result<Guid>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
+        // 0. Obtener sede del usuario creador si no se especificó
+        var sedeAUsar = request.Sede;
+        if (!sedeAUsar.HasValue && !string.IsNullOrEmpty(request.EmailUsuarioCreador))
+        {
+            var usuarioCreador = await _db.Set<Usuario>()
+                .FirstOrDefaultAsync(u => u.Correo == request.EmailUsuarioCreador, cancellationToken);
+            sedeAUsar = usuarioCreador?.Sede;
+        }
+        // Si aún no hay sede, usar Medellín por defecto
+        sedeAUsar ??= Sede.Medellin;
+
         // 1. Validar que el correo no exista
         var existeCorreo = await _db.Set<Usuario>()
             .AnyAsync(u => u.Correo == request.Correo, cancellationToken);
@@ -101,6 +115,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
             IdTipoDocumento = tipoDocumento.Id,
             NumeroDocumento = request.NumeroDocumento,
             IdEstadoUsuario = estadoActivo.Id,
+            Sede = sedeAUsar.Value,
             FechaCreacion = DateTimeHelper.Now
         };
 

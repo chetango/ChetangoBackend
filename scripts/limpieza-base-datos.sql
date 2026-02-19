@@ -97,11 +97,12 @@ DELETE FROM Profesores
 WHERE IdProfesor != '8f6e460d-328d-4a40-89e3-b8effa76829c';
 PRINT '    ✓ ' + CAST(@@ROWCOUNT AS VARCHAR) + ' profesores eliminados';
 
--- 3. Borrar usuarios EXCEPTO los 3 con Entra ID Y que NO estén referenciados por Profesores o Alumnos
-PRINT '  ↳ Borrando usuarios (excepto los 3 con Entra ID)...';
+-- 3. Borrar usuarios EXCEPTO los 4 con Entra ID Y que NO estén referenciados por Profesores o Alumnos
+PRINT '  ↳ Borrando usuarios (excepto los 4 con Entra ID)...';
 DELETE FROM Usuarios 
 WHERE IdUsuario NOT IN (
-    'b91e51b9-4094-441e-a5b6-062a846b3868', -- Admin: Chetango@chetangoprueba.onmicrosoft.com
+    'b91e51b9-4094-441e-a5b6-062a846b3868', -- Admin Medellín: Chetango@chetangoprueba.onmicrosoft.com
+    'c91e51b9-4094-441e-a5b6-062a846b3869', -- Admin Manizales: chetango.manizales@chetangoprueba.onmicrosoft.com
     '8472BC4A-F83E-4A84-AB5B-ABD8C7D3E2AB', -- Profesor: Jorgepadilla@chetangoprueba.onmicrosoft.com
     '71462106-9863-4fd0-b13d-9878ed231aa6'  -- Alumno: JuanDavid@chetangoprueba.onmicrosoft.com
 )
@@ -116,6 +117,7 @@ BEGIN
     DELETE FROM UsuarioRol
     WHERE IdUsuario NOT IN (
         'b91e51b9-4094-441e-a5b6-062a846b3868',
+        'c91e51b9-4094-441e-a5b6-062a846b3869',
         '8472BC4A-F83E-4A84-AB5B-ABD8C7D3E2AB',
         '71462106-9863-4fd0-b13d-9878ed231aa6'
     );

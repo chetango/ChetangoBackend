@@ -1,4 +1,6 @@
 using Chetango.Domain.Entities.Estados;
+using Chetango.Domain.Enums;
+
 namespace Chetango.Domain.Entities
 {
     public class Pago
@@ -10,6 +12,7 @@ namespace Chetango.Domain.Entities
 
         public DateTime FechaPago { get; set; }
         public decimal MontoTotal { get; set; }
+        public Sede Sede { get; set; } = Sede.Medellin;
         public Guid IdMetodoPago { get; set; }
         public MetodoPago MetodoPago { get; set; } = null!;
         public string? Nota { get; set; }

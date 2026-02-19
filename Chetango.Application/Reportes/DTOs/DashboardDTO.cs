@@ -53,6 +53,8 @@ public class DashboardKPIsDTO
 {
     public int TotalAlumnosActivos { get; set; }
     public decimal IngresosEsteMes { get; set; }
+    public decimal IngresosMedellinEsteMes { get; set; }
+    public decimal IngresosManizalesEsteMes { get; set; }
     public int ClasesProximos7Dias { get; set; }
     public int PaquetesActivos { get; set; }
     public int PaquetesVencidos { get; set; }
@@ -61,6 +63,8 @@ public class DashboardKPIsDTO
     public int AsistenciasHoy { get; set; }
     public int AsistenciasMes { get; set; }
     public decimal EgresosEsteMes { get; set; }
+    public decimal EgresosMedellinEsteMes { get; set; }
+    public decimal EgresosManizalesEsteMes { get; set; }
     public decimal GananciaNeta { get; set; }
     
     /// <summary>

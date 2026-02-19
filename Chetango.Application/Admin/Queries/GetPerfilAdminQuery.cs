@@ -54,6 +54,8 @@ public class GetPerfilAdminQueryHandler : IRequestHandler<GetPerfilAdminQuery, R
                 "Reportes y Estadísticas",
                 "Gestión de Usuarios"
             },
+            Sede: usuario.Sede,
+            SedeNombre: usuario.Sede == Domain.Enums.Sede.Medellin ? "Medellín" : "Manizales",
             DatosAcademia: new DatosAcademiaDTO(
                 NombreAcademia: "Academia Chetango", // TODO: Leer de configuración global
                 Direccion: "Dirección Principal",

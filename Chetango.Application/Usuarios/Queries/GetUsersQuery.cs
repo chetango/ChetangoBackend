@@ -91,6 +91,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<Usuari
             NumeroDocumento = u.NumeroDocumento,
             Rol = DeterminarRol(u),
             Estado = u.Estado.Nombre,
+            Sede = u.Sede,
             FechaCreacion = u.FechaCreacion
         }).ToList();
 

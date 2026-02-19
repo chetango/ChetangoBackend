@@ -1,5 +1,6 @@
 using Chetango.Application.Common;
 using Chetango.Domain.Entities;
+using Chetango.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,8 @@ public record LiquidarMesCommand(
     int Mes,
     int Año,
     Guid CreadoPorIdUsuario,
-    string? Observaciones
+    string? Observaciones,
+    Sede? Sede = null // Opcional: si null, se hereda del usuario logueado
 ) : IRequest<Result<Guid>>;
 
 public class LiquidarMesHandler : IRequestHandler<LiquidarMesCommand, Result<Guid>>
@@ -24,6 +26,15 @@ public class LiquidarMesHandler : IRequestHandler<LiquidarMesCommand, Result<Gui
 
     public async Task<Result<Guid>> Handle(LiquidarMesCommand request, CancellationToken cancellationToken)
     {
+        // Obtener sede del usuario creador si no se especificó
+        var sedeAUsar = request.Sede;
+        if (!sedeAUsar.HasValue)
+        {
+            var usuarioCreador = await _db.Set<Usuario>()
+                .FirstOrDefaultAsync(u => u.IdUsuario == request.CreadoPorIdUsuario, cancellationToken);
+            sedeAUsar = usuarioCreador?.Sede ?? Sede.Medellin;
+        }
+
         // Obtener todas las clases aprobadas del mes
         var clasesAprobadas = await _db.Set<ClaseProfesor>()
             .Include(cp => cp.Clase)
@@ -86,6 +97,7 @@ public class LiquidarMesHandler : IRequestHandler<LiquidarMesCommand, Result<Gui
                 IdProfesor = request.IdProfesor,
                 Mes = request.Mes,
                 Año = request.Año,
+                Sede = sedeAUsar.Value,
                 TotalClases = totalClases,
                 TotalHoras = totalHoras,
                 TotalBase = totalBase,

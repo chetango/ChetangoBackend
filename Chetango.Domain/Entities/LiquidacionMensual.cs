@@ -1,4 +1,5 @@
 using Chetango.Domain.Entities.Estados;
+using Chetango.Domain.Enums;
 
 namespace Chetango.Domain.Entities
 {
@@ -10,6 +11,7 @@ namespace Chetango.Domain.Entities
         
         public int Mes { get; set; } // 1-12
         public int Año { get; set; }
+        public Sede Sede { get; set; } = Sede.Medellin;
         
         public int TotalClases { get; set; }
         public decimal TotalHoras { get; set; }

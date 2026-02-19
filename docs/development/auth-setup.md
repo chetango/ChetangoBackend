@@ -487,20 +487,27 @@ function ProtectedRoute({ children, allowedRoles }) {
 
 ### **Credenciales de Usuarios Reales**
 
-| Rol | Email | Contraseña | IdUsuario | Datos Adicionales |
-|-----|-------|------------|-----------|-------------------|
-| **Admin** | Chetango@chetangoprueba.onmicrosoft.com | Chet4ngo20# | b91e51b9-4094-441e-a5b6-062a846b3868 | - |
-| **Profesor** | Jorgepadilla@chetangoprueba.onmicrosoft.com | Jorge2026 | 8472BC4A-F83E-4A84-AB5B-ABD8C7D3E2AB | IdProfesor: 8f6e460d-328d-4a40-89e3-b8effa76829c |
-| **Alumno** | JuanDavid@chetangoprueba.onmicrosoft.com | Juaj0rge20# | 71462106-9863-4fd0-b13d-9878ed231aa6 | IdAlumno: 295093d5-b36f-4737-b68a-ab40ca871b2e |
+| Rol | Email | Contraseña | Sede | IdUsuario | Datos Adicionales |
+|-----|-------|------------|------|-----------|-------------------|
+| **Admin Medellín** | Chetango@chetangoprueba.onmicrosoft.com | Chet4ngo20# | Medellín (1) | b91e51b9-4094-441e-a5b6-062a846b3868 | - |
+| **Admin Manizales** | chetango.manizales@chetangoprueba.onmicrosoft.com | Maniz4les20# | Manizales (2) | c91e51b9-4094-441e-a5b6-062a846b3869 | - |
+| **Profesor** | Jorgepadilla@chetangoprueba.onmicrosoft.com | Jorge2026 | Medellín (1) | 8472BC4A-F83E-4A84-AB5B-ABD8C7D3E2AB | IdProfesor: 8f6e460d-328d-4a40-89e3-b8effa76829c |
+| **Alumno** | JuanDavid@chetangoprueba.onmicrosoft.com | Juaj0rge20# | Medellín (1) | 71462106-9863-4fd0-b13d-9878ed231aa6 | IdAlumno: 295093d5-b36f-4737-b68a-ab40ca871b2e |
 
 ### **Usar en Pruebas**
 
 ```javascript
 // Para desarrollo, puedes hardcodear temporalmente
 const testUsers = {
-  admin: {
+  adminMedellin: {
     email: 'Chetango@chetangoprueba.onmicrosoft.com',
-    password: 'Chet4ngo20#'
+    password: 'Chet4ngo20#',
+    sede: 1
+  },
+  adminManizales: {
+    email: 'chetango.manizales@chetangoprueba.onmicrosoft.com',
+    password: 'Maniz4les20#',
+    sede: 2
   },
   profesor: {
     email: 'Jorgepadilla@chetangoprueba.onmicrosoft.com',

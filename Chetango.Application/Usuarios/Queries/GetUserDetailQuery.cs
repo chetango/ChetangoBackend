@@ -45,6 +45,7 @@ public class GetUserDetailQueryHandler : IRequestHandler<GetUserDetailQuery, Res
             NumeroDocumento = usuario.NumeroDocumento,
             Rol = DeterminarRol(usuario),
             Estado = usuario.Estado.Nombre,
+            Sede = usuario.Sede,
             FechaCreacion = usuario.FechaCreacion
         };
 

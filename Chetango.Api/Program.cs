@@ -1311,8 +1311,13 @@ app.MapGet("/api/alumnos/{idAlumno:guid}/pagos", async (
 // POST /api/pagos - Registrar pago (AdminOnly)
 app.MapPost("/api/pagos", async (
     RegistrarPagoDTO dto,
+    ClaimsPrincipal user,
     IMediator mediator) =>
 {
+    var email = user.FindFirst(ClaimTypes.Email)?.Value 
+             ?? user.FindFirst("preferred_username")?.Value 
+             ?? user.FindFirst("email")?.Value;
+
     var command = new RegistrarPagoCommand(
         dto.IdAlumno,
         dto.FechaPago,
@@ -1322,7 +1327,9 @@ app.MapPost("/api/pagos", async (
         dto.UrlComprobante,
         dto.Nota,
         dto.Paquetes,
-        dto.IdsPaquetesExistentes
+        dto.IdsPaquetesExistentes,
+        null, // Sede - se heredará del usuario
+        email // EmailUsuarioCreador
     );
 
     var result = await mediator.Send(command);
@@ -2573,8 +2580,13 @@ app.MapGet("/api/usuarios/{id:guid}", async (
 // POST /api/usuarios - Crear un nuevo usuario (AdminOnly)
 app.MapPost("/api/usuarios", async (
     CreateUserRequest request,
+    ClaimsPrincipal user,
     IMediator mediator) =>
 {
+    var email = user.FindFirst(ClaimTypes.Email)?.Value 
+             ?? user.FindFirst("preferred_username")?.Value 
+             ?? user.FindFirst("email")?.Value;
+
     var datosProfesor = request.DatosProfesor != null
         ? new DatosProfesorRequest(
             request.DatosProfesor.TipoProfesor,
@@ -2604,7 +2616,9 @@ app.MapPost("/api/usuarios", async (
         request.CorreoAzure,
         request.ContrasenaTemporalAzure,
         request.EnviarWhatsApp,
-        request.EnviarEmail
+        request.EnviarEmail,
+        null, // Sede - se heredará del usuario
+        email // EmailUsuarioCreador
     );
 
     var result = await mediator.Send(command);

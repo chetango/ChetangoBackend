@@ -1,10 +1,11 @@
 -- =====================================================================
 -- Script de Datos de Prueba para Autenticación con Microsoft Entra CIAM
 -- =====================================================================
--- Este script crea 3 usuarios de prueba con sus datos relacionados:
---   1. Chetango (Admin)
---   2. Jorge Padilla (Profesor) 
---   3. Juan David (Alumno)
+-- Este script crea 4 usuarios de prueba con sus datos relacionados:
+--   1. Chetango (Admin - Medellín)
+--   2. Chetango Manizales (Admin - Manizales)
+--   3. Jorge Padilla (Profesor) 
+--   4. Juan David (Alumno)
 --
 -- IMPORTANTE: 
 -- - Estos usuarios YA EXISTEN en Microsoft Entra External ID (CIAM)
@@ -13,6 +14,11 @@
 --   documentadas en docs/API-CONTRACT-FRONTEND.md
 -- =====================================================================
 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 USE ChetangoDB_Dev;
 GO
 
@@ -20,6 +26,7 @@ GO
 -- VARIABLES DE IDS (para referencia y consistencia)
 -- =====================================================================
 DECLARE @IdUsuarioChetango UNIQUEIDENTIFIER = 'b91e51b9-4094-441e-a5b6-062a846b3868';
+DECLARE @IdUsuarioChetangoManizales UNIQUEIDENTIFIER = 'c91e51b9-4094-441e-a5b6-062a846b3869'; -- Nuevo admin Manizales
 DECLARE @IdUsuarioJorge UNIQUEIDENTIFIER = '8472BC4A-F83E-4A84-AB5B-ABD8C7D3E2AB';
 DECLARE @IdUsuarioJuanDavid UNIQUEIDENTIFIER = '6f84b6a7-b0ae-456b-a455-eabae44d2930';
 
@@ -54,37 +61,75 @@ END
 BEGIN TRANSACTION;
 
 BEGIN TRY
-    -- =====================================================================
-    -- 1. USUARIO ADMIN: Chetango
+    -- ========================== (Medellín)
     -- =====================================================================
     -- Correo: Chetango@chetangoprueba.onmicrosoft.com
     -- Contraseña: Chet4ngo20#
     -- Rol en Entra: admin
+    -- Sede: Medellín (1)
     
     IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE IdUsuario = @IdUsuarioChetango)
     BEGIN
-        INSERT INTO Usuarios (IdUsuario, NombreUsuario, IdTipoDocumento, NumeroDocumento, Correo, Telefono, IdEstadoUsuario)
+        INSERT INTO Usuarios (IdUsuario, NombreUsuario, IdTipoDocumento, NumeroDocumento, Correo, Telefono, IdEstadoUsuario, Sede, FechaCreacion)
         VALUES (
             @IdUsuarioChetango,
-            'Chetango Admin',
+            'Administrador Chetango',
             @IdTipoDocOID,
             'admin-oid-001',
             'Chetango@chetangoprueba.onmicrosoft.com',
             '0000000000',
-            @IdEstadoActivo
+            @IdEstadoActivo,
+            1, -- Medellín
+            GETDATE()
         );
-        PRINT '✓ Usuario Admin Chetango creado';
+        PRINT '✓ Usuario Admin Chetango (Medellín) creado';
     END
     ELSE
     BEGIN
         PRINT '→ Usuario Admin Chetango ya existe, actualizando datos...';
         UPDATE Usuarios 
-        SET NombreUsuario = 'Chetango Admin',
-            Correo = 'Chetango@chetangoprueba.onmicrosoft.com'
+        SET NombreUsuario = 'Administrador Chetango',
+            Correo = 'Chetango@chetangoprueba.onmicrosoft.com',
+            Sede = 1 -- Medellín
         WHERE IdUsuario = @IdUsuarioChetango;
     END
 
     -- =====================================================================
+    -- 2. USUARIO ADMIN: Chetango Manizales (Manizales)
+    -- =====================================================================
+    -- Correo: chetango.manizales@chetangoprueba.onmicrosoft.com
+    -- Contraseña: Maniz4les20#
+    -- Rol en Entra: admin
+    -- Sede: Manizales (2)
+    
+    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE IdUsuario = @IdUsuarioChetangoManizales)
+    BEGIN
+        INSERT INTO Usuarios (IdUsuario, NombreUsuario, IdTipoDocumento, NumeroDocumento, Correo, Telefono, IdEstadoUsuario, Sede, FechaCreacion)
+        VALUES (
+            @IdUsuarioChetangoManizales,
+            'Administrador Chetango Manizales',
+            @IdTipoDocOID,
+            'admin-oid-002',
+            'chetango.manizales@chetangoprueba.onmicrosoft.com',
+            '0000000001',
+            @IdEstadoActivo,
+            2, -- Manizales
+            GETDATE()
+        );
+        PRINT '✓ Usuario Admin Chetango Manizales creado';
+    END
+    ELSE
+    BEGIN
+        PRINT '→ Usuario Admin Chetango Manizales ya existe, actualizando datos...';
+        UPDATE Usuarios 
+        SET NombreUsuario = 'Administrador Chetango Manizales',
+            Correo = 'chetango.manizales@chetangoprueba.onmicrosoft.com',
+            Sede = 2 -- Manizales
+        WHERE IdUsuario = @IdUsuarioChetangoManizales;
+    END
+
+    -- =====================================================================
+    -- 3====================================================================
     -- 2. USUARIO PROFESOR: Jorge Padilla
     -- =====================================================================
     -- Correo: Jorgepadilla@chetangoprueba.onmicrosoft.com
@@ -273,9 +318,10 @@ BEGIN TRY
     PRINT '=====================================================================';
     PRINT '';
     PRINT 'Usuarios creados:';
-    PRINT '  1. Admin:    Chetango@chetangoprueba.onmicrosoft.com / Chet4ngo20#';
-    PRINT '  2. Profesor: Jorgepadilla@chetangoprueba.onmicrosoft.com / Jorge2026';
-    PRINT '  3. Alumno:   JuanDavid@chetangoprueba.onmicrosoft.com / Juaj0rge20#';
+    PRINT '  1. Admin Medellín:    Chetango@chetangoprueba.onmicrosoft.com / Chet4ngo20#';
+    PRINT '  2. Admin Manizales:   chetango.manizales@chetangoprueba.onmicrosoft.com / Maniz4les20#';
+    PRINT '  3. Profesor:          Jorgepadilla@chetangoprueba.onmicrosoft.com / Jorge2026';
+    PRINT '  4. Alumno:            JuanDavid@chetangoprueba.onmicrosoft.com / Juaj0rge20#';
     PRINT '';
     PRINT 'Datos adicionales:';
     PRINT '  - 1 Clase de Jorge (hoy 19:00-20:30)';

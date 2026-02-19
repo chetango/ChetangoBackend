@@ -3,6 +3,7 @@
 // ============================================
 
 using System.Text.Json.Serialization;
+using Chetango.Domain.Enums;
 
 namespace Chetango.Application.Usuarios.DTOs;
 
@@ -31,6 +32,12 @@ public class UsuarioDTO
     
     [JsonPropertyName("estado")]
     public string Estado { get; set; } = null!; // "activo" | "inactivo" | "pendiente_azure"
+    
+    [JsonPropertyName("sede")]
+    public Sede Sede { get; set; }
+    
+    [JsonPropertyName("sedeNombre")]
+    public string SedeNombre => Sede == Sede.Medellin ? "Medellín" : "Manizales";
     
     [JsonPropertyName("fechaCreacion")]
     public DateTime FechaCreacion { get; set; }
@@ -64,6 +71,12 @@ public class UsuarioDetalleDTO
     
     [JsonPropertyName("estado")]
     public string Estado { get; set; } = null!;
+    
+    [JsonPropertyName("sede")]
+    public Sede Sede { get; set; }
+    
+    [JsonPropertyName("sedeNombre")]
+    public string SedeNombre => Sede == Sede.Medellin ? "Medellín" : "Manizales";
     
     [JsonPropertyName("fechaCreacion")]
     public DateTime FechaCreacion { get; set; }
