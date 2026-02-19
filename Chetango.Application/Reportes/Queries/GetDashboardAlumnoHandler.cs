@@ -78,13 +78,13 @@ public class GetDashboardAlumnoHandler : IRequestHandler<GetDashboardAlumnoQuery
         // ==========================================
         // 3. PRÓXIMA CLASE
         // ==========================================
+        // Buscar la próxima clase programada (sin filtrar por asistencia previa)
+        // ya que las asistencias se marcan cuando el alumno llega a clase
         var proximaClase = await _db.Clases
             .Include(c => c.TipoClase)
             .Include(c => c.ProfesorPrincipal)
                 .ThenInclude(p => p.Usuario)
-            .Where(c => c.Fecha >= hoy &&
-                       _db.Asistencias.Any(a => a.IdClase == c.IdClase && 
-                                               a.IdAlumno == alumno.IdAlumno))
+            .Where(c => c.Fecha >= hoy)
             .OrderBy(c => c.Fecha)
             .ThenBy(c => c.HoraInicio)
             .FirstOrDefaultAsync(cancellationToken);
