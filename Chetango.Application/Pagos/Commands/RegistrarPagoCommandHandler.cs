@@ -18,6 +18,17 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
 
     public async Task<Result<RegistrarPagoResponseDTO>> Handle(RegistrarPagoCommand request, CancellationToken cancellationToken)
     {
+        // Obtener sede del usuario creador si no se especificó
+        var sedeAUsar = request.Sede;
+        if (!sedeAUsar.HasValue && !string.IsNullOrEmpty(request.EmailUsuarioCreador))
+        {
+            var usuarioCreador = await _db.Set<Usuario>()
+                .FirstOrDefaultAsync(u => u.Correo == request.EmailUsuarioCreador, cancellationToken);
+            sedeAUsar = usuarioCreador?.Sede;
+        }
+        // Si aún no hay sede, usar Medellín por defecto
+        sedeAUsar ??= Domain.Enums.Sede.Medellin;
+
         // Validaciones inline
         if (request.MontoTotal <= 0)
         {
@@ -128,6 +139,7 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
                 MontoTotal = request.MontoTotal,
                 IdMetodoPago = request.IdMetodoPago,
                 IdEstadoPago = estadoPendiente.Id,
+                Sede = sedeAUsar.Value,
                 ReferenciaTransferencia = request.ReferenciaTransferencia,
                 UrlComprobante = request.UrlComprobante,
                 Nota = request.Nota,

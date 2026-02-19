@@ -2,6 +2,9 @@
 // ADMIN PROFILE DTO
 // ============================================
 
+using Chetango.Domain.Enums;
+using System.Text.Json.Serialization;
+
 namespace Chetango.Application.Admin.DTOs;
 
 public record AdminProfileDTO(
@@ -18,6 +21,8 @@ public record AdminProfileDTO(
     string Cargo,
     string Departamento,
     List<string> Permisos,
+    [property: JsonPropertyName("sede")] Sede Sede,
+    [property: JsonPropertyName("sedeNombre")] string SedeNombre,
     DatosAcademiaDTO DatosAcademia,
     ConfiguracionAdminDTO Configuracion
 );

@@ -1,5 +1,7 @@
 namespace Chetango.Application.Pagos.DTOs;
 
+using Chetango.Domain.Enums;
+
 public record PagoDTO(
     Guid IdPago,
     DateTime FechaPago,
@@ -12,7 +14,9 @@ public record PagoDTO(
     string? NotasVerificacion,
     DateTime? FechaVerificacion,
     string? UsuarioVerificacion,
-    int CantidadPaquetes
+    int CantidadPaquetes,
+    Sede Sede,
+    string SedeNombre
 );
 
 

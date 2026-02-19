@@ -1,5 +1,6 @@
 using Chetango.Application.Common;
 using Chetango.Application.Reportes.DTOs;
+using Chetango.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -85,6 +86,14 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes)
             .SumAsync(p => p.MontoTotal, cancellationToken);
 
+        var ingresosMedellinEsteMes = await _db.Pagos
+            .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes && p.Sede == Sede.Medellin)
+            .SumAsync(p => p.MontoTotal, cancellationToken);
+
+        var ingresosManizalesEsteMes = await _db.Pagos
+            .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes && p.Sede == Sede.Manizales)
+            .SumAsync(p => p.MontoTotal, cancellationToken);
+
         var clasesProximos7Dias = await _db.Clases
             .CountAsync(c => c.Fecha >= hoy && c.Fecha <= proximos7Dias, cancellationToken);
 
@@ -103,7 +112,8 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
         // Contar asistencias registradas hoy con estado "Presente"
         var asistenciasHoy = await _db.Asistencias
             .Include(a => a.Estado)
-            .Where(a => a.FechaRegistro.Date == hoy && a.Estado.Nombre == "Presente")
+            .Include(a => a.Clase)
+            .Where(a => a.Clase.Fecha.Date == hoy && a.Estado.Nombre == "Presente")
             .CountAsync(cancellationToken);
 
         var asistenciasMes = await _db.Asistencias
@@ -158,6 +168,14 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes)
             .SumAsync(l => l.TotalPagar, cancellationToken);
 
+        var egresosMedellinEsteMes = await _db.LiquidacionesMensuales
+            .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes && l.Sede == Sede.Medellin)
+            .SumAsync(l => l.TotalPagar, cancellationToken);
+
+        var egresosManizalesEsteMes = await _db.LiquidacionesMensuales
+            .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes && l.Sede == Sede.Manizales)
+            .SumAsync(l => l.TotalPagar, cancellationToken);
+
         var egresosPeriodoAnterior = await _db.LiquidacionesMensuales
             .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaPeriodoAnterior && l.FechaPago <= ultimoDiaPeriodoAnterior)
             .SumAsync(l => l.TotalPagar, cancellationToken);
@@ -179,6 +197,8 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
         {
             TotalAlumnosActivos = totalAlumnosActivos,
             IngresosEsteMes = ingresosEsteMes,
+            IngresosMedellinEsteMes = ingresosMedellinEsteMes,
+            IngresosManizalesEsteMes = ingresosManizalesEsteMes,
             ClasesProximos7Dias = clasesProximos7Dias,
             PaquetesActivos = paquetesActivos,
             PaquetesVencidos = paquetesVencidos,
@@ -187,6 +207,8 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             AsistenciasHoy = asistenciasHoy,
             AsistenciasMes = asistenciasMes,
             EgresosEsteMes = egresosEsteMes,
+            EgresosMedellinEsteMes = egresosMedellinEsteMes,
+            EgresosManizalesEsteMes = egresosManizalesEsteMes,
             GananciaNeta = gananciaNeta,
             CrecimientoIngresosMesAnterior = crecimientoIngresos.HasValue ? Math.Round(crecimientoIngresos.Value, 2) : null,
             ComparativaAsistenciasMesAnterior = comparativaAsistencias.HasValue ? Math.Round(comparativaAsistencias.Value, 2) : null,

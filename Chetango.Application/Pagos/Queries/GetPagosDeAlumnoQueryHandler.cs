@@ -85,7 +85,9 @@ public class GetPagosDeAlumnoQueryHandler : IRequestHandler<GetPagosDeAlumnoQuer
                 p.NotasVerificacion,
                 p.FechaVerificacion,
                 p.UsuarioVerificacion,
-                p.Paquetes.Count
+                p.Paquetes.Count,
+                p.Sede,
+                p.Sede == Domain.Enums.Sede.Medellin ? "Medellín" : "Manizales"
             ))
             .ToListAsync(cancellationToken);
 
