@@ -2614,7 +2614,6 @@ app.MapPost("/api/usuarios", async (
         datosProfesor,
         datosAlumno,
         request.CorreoAzure,
-        request.ContrasenaTemporalAzure,
         request.EnviarWhatsApp,
         request.EnviarEmail,
         null, // Sede - se heredará del usuario
