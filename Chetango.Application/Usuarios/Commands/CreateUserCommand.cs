@@ -23,7 +23,6 @@ public record CreateUserCommand(
     DatosProfesorRequest? DatosProfesor,
     DatosAlumnoRequest? DatosAlumno,
     string CorreoAzure,
-    string ContrasenaTemporalAzure,
     bool EnviarWhatsApp,
     bool EnviarEmail,
     Sede? Sede = null, // Opcional: si null, se hereda del usuario creador
@@ -184,11 +183,10 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        // TODO: Enviar notificaciones (WhatsApp/Email) con credenciales
+        // TODO: Enviar notificaciones (WhatsApp/Email) con credenciales de acceso
         // Implementar servicio de notificaciones que envíe:
-        // - CorreoAzure
-        // - ContrasenaTemporalAzure
-        // - Mensaje de bienvenida
+        // - CorreoAzure (la contraseña la maneja Azure, no se almacena localmente)
+        // - Mensaje de bienvenida con instrucciones de primer login
 
         return Result<Guid>.Success(usuario.IdUsuario);
     }

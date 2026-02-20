@@ -157,7 +157,6 @@ public class CreateUserRequest
     public ProfesorDataRequest? DatosProfesor { get; set; }
     public AlumnoDataRequest? DatosAlumno { get; set; }
     public string CorreoAzure { get; set; } = null!;
-    public string ContrasenaTemporalAzure { get; set; } = null!;
     public bool EnviarWhatsApp { get; set; }
     public bool EnviarEmail { get; set; }
 }
