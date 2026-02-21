@@ -4,6 +4,7 @@ using Chetango.Domain.Enums;
 
 public record PagoDTO(
     Guid IdPago,
+    Guid IdAlumno,
     DateTime FechaPago,
     decimal MontoTotal,
     string NombreMetodoPago,

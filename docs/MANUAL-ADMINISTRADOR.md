@@ -2,8 +2,9 @@
 
 ## Guía Completa de Operación Diaria
 
-> **Versión:** 1.0  
+> **Versión:** 2.0  
 > **Fecha:** Febrero 2026  
+> **Actualizado:** Sistema Multi-Sede (Medellín y Manizales)  
 > **Audiencia:** Administradores del Sistema Chetango
 
 ---
@@ -12,17 +13,18 @@
 
 1. [Introducción](#introducción)
 2. [Conceptos Fundamentales](#conceptos-fundamentales)
-3. [Flujo de Trabajo Completo](#flujo-de-trabajo-completo)
-4. [Módulo 1: Gestión de Usuarios](#módulo-1-gestión-de-usuarios)
-5. [Módulo 2: Gestión de Paquetes](#módulo-2-gestión-de-paquetes)
-6. [Módulo 3: Gestión de Pagos](#módulo-3-gestión-de-pagos)
-7. [Módulo 4: Gestión de Clases](#módulo-4-gestión-de-clases)
-8. [Módulo 5: Gestión de Asistencias](#módulo-5-gestión-de-asistencias)
-9. [Módulo 6: Nómina de Profesores](#módulo-6-nómina-de-profesores)
-10. [Reportes y Consultas](#reportes-y-consultas)
-11. [Casos Especiales](#casos-especiales)
-12. [Preguntas Frecuentes](#preguntas-frecuentes)
-13. [Glosario de Términos](#glosario-de-términos)
+3. [**NUEVO:** Sistema Multi-Sede](#sistema-multi-sede)
+4. [Flujo de Trabajo Completo](#flujo-de-trabajo-completo)
+5. [Módulo 1: Gestión de Usuarios](#módulo-1-gestión-de-usuarios)
+6. [Módulo 2: Gestión de Paquetes](#módulo-2-gestión-de-paquetes)
+7. [Módulo 3: Gestión de Pagos](#módulo-3-gestión-de-pagos)
+8. [Módulo 4: Gestión de Clases](#módulo-4-gestión-de-clases)
+9. [Módulo 5: Gestión de Asistencias](#módulo-5-gestión-de-asistencias)
+10. [Módulo 6: Nómina de Profesores](#módulo-6-nómina-de-profesores)
+11. [Reportes y Consultas](#reportes-y-consultas)
+12. [Casos Especiales](#casos-especiales)
+13. [Preguntas Frecuentes](#preguntas-frecuentes)
+14. [Glosario de Términos](#glosario-de-términos)
 
 ---
 
@@ -30,14 +32,16 @@
 
 ### ¿Qué es el Sistema Chetango?
 
-El Sistema Chetango es una plataforma integral para la gestión de una academia de baile (Tango), que permite administrar:
+El Sistema Chetango es una plataforma integral para la gestión de Corporación Chetango, una academia de baile (Tango) con **múltiples sedes**, que permite administrar:
 
-- **Usuarios:** Alumnos, profesores y administradores
+- **Sedes:** Medellín y Manizales (gestión independiente)
+- **Usuarios:** Alumnos, profesores y administradores por sede
 - **Paquetes:** Planes de clases que compran los alumnos
-- **Pagos:** Registro y seguimiento de transacciones
+- **Pagos:** Registro y seguimiento de transacciones por sede
 - **Clases:** Programación de sesiones grupales y privadas
 - **Asistencias:** Control de asistencia de alumnos
-- **Nómina:** Liquidación y pago a profesores
+- **Nómina:** Liquidación y pago a profesores por sede
+- **Dashboard:** Vista consolidada o por sede de todas las operaciones
 
 ### Objetivo de este Manual
 
@@ -56,20 +60,249 @@ El sistema maneja **tres roles principales**:
 - Acceso completo a todos los módulos
 - Responsable de toda la operación diaria
 - Puede crear, editar y eliminar cualquier información
+- **Puede ver y gestionar TODAS las sedes** (Medellín y Manizales)
+- Los usuarios/pagos/clases que cree heredarán su sede automáticamente
 
 #### 2. 👨‍🏫 Profesor
 - Dicta las clases de tango
 - Puede ver sus propias clases y pagos
 - Puede registrar asistencias en sus clases
 - Recibe pagos mensuales según tarifas configuradas
+- **Pertenece a una sede específica** (se asigna al crearlo)
 
 #### 3. 🧑‍🎓 Alumno
 - Asiste a las clases
 - Compra paquetes de clases
 - Ve su historial de asistencias y pagos
 - Puede tener múltiples paquetes simultáneamente
+- **Pertenece a una sede específica** (se asigna al crearlo)
 
-### Elementos Clave del Sistema
+---
+
+## 🏢 Sistema Multi-Sede
+
+### ¿Qué es el Sistema Multi-Sede?
+
+Corporación Chetango opera en **dos ciudades diferentes**:
+- 🏢 **Sede Medellín:** Opera desde 2024
+- 🏢 **Sede Manizales:** Inaugurada en 2025
+
+El sistema permite gestionar ambas sedes de forma **independiente pero centralizada**:
+- Los datos de cada sede están **completamente separados**
+- Los alumnos de Medellín NO ven alumnos de Manizales
+- Los profesores de cada sede solo ven sus datos
+- Los pagos, clases y reportes se filtran automáticamente por sede
+
+### Funcionamiento de las Sedes
+
+#### Asignación Automática de Sede
+
+**Cuando un administrador crea un registro (alumno, pago, clase), el sistema:**
+
+1. Detecta la sede del administrador que está logueado
+2. Asigna automáticamente esa sede al nuevo registro
+3. El registro queda vinculado permanentemente a esa sede
+
+**Ejemplo:**
+```
+Jorge (Admin de Medellín) crea alumno "Pedro Pérez"
+→ Pedro queda asignado a Sede: Medellín
+→ Todos sus pagos, paquetes y clases serán de Medellín
+```
+
+#### Herencia de Sede
+
+**Regla fundamental:** Todo hereda la sede del usuario que lo creó
+
+```
+USUARIO (tiene sede asignada)
+  ↓ crea
+PAGO (hereda la sede del usuario)
+  ↓ genera
+PAQUETE (hereda la sede del pago)
+  ↓ se usa en
+CLASE (hereda la sede del usuario)
+  ↓ genera
+ASISTENCIA (hereda la sede de la clase)
+  ↓ genera
+LIQUIDACIÓN (hereda la sede del profesor)
+```
+
+### Filtros por Sede en el Dashboard
+
+El Dashboard principal tiene **pestañas para filtrar por sede**:
+
+```
+┌─────────────────────────────────────────────────┐
+│  [Todas las Sedes]  [Medellín]  [Manizales]    │
+└─────────────────────────────────────────────────┘
+```
+
+**Al seleccionar una sede:**
+- Todos los KPIs se filtran automáticamente
+- Los gráficos muestran solo datos de esa sede
+- Los reportes se generan solo para esa sede
+
+**Vista "Todas las Sedes":**
+- Muestra totales consolidados
+- Permite comparar performance entre sedes
+- Útil para reportes ejecutivos
+
+### Páginas con Filtro de Sede
+
+Las siguientes páginas tienen selector de sede en la parte superior:
+
+#### 1. Dashboard (`/`)
+- **Filtro:** Pestañas horizontales (Todas/Medellín/Manizales)
+- **Comportamiento:** Actualiza todos los KPIs y gráficos
+
+#### 2. Pagos (`/admin/pagos`)
+- **Filtro:** Dropdown en la esquina superior derecha
+- **Comportamiento:** Filtra tabla de pagos
+- **Opciones:**
+  - Todas las sedes
+  - Medellín
+  - Manizales
+
+#### 3. Usuarios (`/admin/usuarios`)
+- **Filtro:** Dropdown junto a búsqueda
+- **Comportamiento:** Filtra alumnos y profesores
+- **Nota:** Al crear usuario, se asigna sede del admin automáticamente
+
+#### 4. Reportes (`/admin/reportes`)
+- **Filtro:** Dropdown en barra de herramientas
+- **Comportamiento:** Filtra todas las consultas de reportes
+- **Ejemplo:** Reporte de ingresos muestra solo la sede seleccionada
+
+### Cambio de Sede de un Usuario
+
+**⚠️ Importante:** Una vez creado, **NO se puede cambiar la sede de un usuario** desde la interfaz.
+
+**¿Por qué?** 
+- Los pagos, paquetes y clases ya están vinculados a la sede original
+- Cambiar la sede podría causar inconsistencias en reportes
+- Cada sede maneja su propia contabilidad
+
+**Si necesitas cambiar la sede:**
+1. Contactar a soporte técnico
+2. Se debe hacer manualmente en la base de datos
+3. Se deben actualizar TODOS los registros relacionados
+
+**Alternativa:**
+- Crear nuevo usuario en la sede correcta
+- Transferir información manualmente
+- Desactivar el usuario en la sede incorrecta
+
+### Casos de Uso Multi-Sede
+
+#### Caso 1: Profesor Trabaja en Ambas Sedes
+
+**Situación:** Jorge Padilla dicta clases en Medellín y Manizales
+
+**Solución:**
+- Crear **2 usuarios distintos:**
+  - `jorge.medellin@chetango.com` (Sede: Medellín)
+  - `jorge.manizales@chetango.com` (Sede: Manizales)
+- Cada usuario tiene su propia liquidación mensual
+- Los pagos de cada sede se manejan independientemente
+
+**Ventajas:**
+- ✅ Contabilidad separada por sede
+- ✅ No hay confusión en reportes
+- ✅ Cada sede paga según sus clases
+
+#### Caso 2: Alumno se Muda de Ciudad
+
+**Situación:** María estudia en Medellín pero se muda a Manizales
+
+**Opción 1 (Recomendada):**
+- Crear nuevo usuario en Manizales
+- Desactivar usuario en Medellín
+- Mantener histórico en ambas sedes
+
+**Opción 2:**
+- Permitir que use sus clases restantes en Medellín remotamente
+- Cuando se agoten, crear nuevo usuario en Manizales
+
+#### Caso 3: Admin Centralizado
+
+**Situación:** Un admin necesita gestionar ambas sedes
+
+**Solución actual:**
+- Admin puede ver TODAS las sedes usando filtros
+- Los registros que cree heredarán su sede
+- **Recomendación:** Tener admins dedicados por sede
+
+**Alternativa futura (SaaS):**
+- Admin puede cambiar su "sede activa" temporalmente
+- Los registros heredan la sede seleccionada
+
+### Reportes Multi-Sede
+
+#### Dashboard Financiero
+
+El dashboard muestra **desglose comparativo** entre sedes:
+
+```
+┌─────────────────────────────────────────────┐
+│           RESUMEN FINANCIERO                │
+├─────────────────────────────────────────────┤
+│  Sede Medellín:                             │
+│    - Ingresos: $15,500,000                  │
+│    - Egresos: $8,200,000                    │
+│    - Utilidad: $7,300,000                   │
+│                                              │
+│  Sede Manizales:                            │
+│    - Ingresos: $8,300,000                   │
+│    - Egresos: $4,100,000                    │
+│    - Utilidad: $4,200,000                   │
+│                                              │
+│  TOTAL CONSOLIDADO:                         │
+│    - Ingresos: $23,800,000                  │
+│    - Egresos: $12,300,000                   │
+│    - Utilidad: $11,500,000                  │
+└─────────────────────────────────────────────┘
+```
+
+#### KPIs por Sede
+
+Cada KPI del dashboard puede verse:
+- **Consolidado:** Total de ambas sedes
+- **Por sede:** Medellín vs Manizales
+
+**Ejemplos:**
+- Alumnos activos: Medellín (180) + Manizales (85) = **265 total**
+- Clases del mes: Medellín (120) + Manizales (65) = **185 total**
+- Ingresos: Medellín ($15.5M) + Manizales ($8.3M) = **$23.8M total**
+
+### Consideraciones Importantes
+
+#### ✅ Ventajas del Sistema Multi-Sede
+
+- **Separación clara de operaciones** por ciudad
+- **Reportes independientes** para cada sede
+- **Escalabilidad:** Fácil agregar más sedes
+- **Autonomía:** Cada sede puede operar independientemente
+- **Consolidación:** Vista global cuando se necesita
+
+#### ⚠️ Limitaciones Actuales
+
+- No se puede cambiar sede de un usuario existente
+- Un usuario solo puede pertenecer a una sede
+- No hay transferencia automática de paquetes entre sedes
+- Los profesores que trabajan en ambas sedes necesitan 2 usuarios
+
+#### 🔮 Mejoras Futuras (SaaS)
+
+Cuando el sistema se convierta en SaaS para múltiples academias:
+- Cada academia será un "tenant" independiente
+- Las sedes pasarán a ser subdivisiones dentro de cada academia
+- Un alumno podrá usar sus clases en cualquier sede de su academia
+- Mayor flexibilidad en la gestión multi-sede
+
+---
+
+## 🔄 Flujo de Trabajo Completo
 
 #### Paquete de Clases
 - Es un **conjunto de clases prepagadas** que compra un alumno
@@ -2093,15 +2326,17 @@ El alumno debe pagar nuevo paquete
 
 ## ❓ Preguntas Frecuentes
 
-### ¿Qué hago si un alumno compra por error?
+### Gestión Básica
+
+#### ¿Qué hago si un alumno compra por error?
 - Registra una devolución (pago negativo)
 - Ver [8.1 Devolución de Dinero](#81-devolución-de-dinero)
 
-### ¿Puedo eliminar un pago?
+#### ¿Puedo eliminar un pago?
 - ❌ NO se recomienda eliminar
 - ✅ Mejor: registra devolución
 
-### ¿Puedo editar un paquete después de creado?
+#### ¿Puedo editar un paquete después de creado?
 - ✅ Sí, puedes editar:
   - Fecha de vencimiento
   - Estado (congelar/descongelar)
@@ -2110,32 +2345,110 @@ El alumno debe pagar nuevo paquete
   - Tipo de paquete
   - Alumno propietario
 
-### ¿Cómo sé qué paquetes están por vencer?
+#### ¿Cómo sé qué paquetes están por vencer?
 - Menu → Dashboard → Ver alertas
 - Menu → Paquetes → Filtro: "Por vencer"
 
-### ¿Puedo tener múltiples paquetes activos para un alumno?
+#### ¿Puedo tener múltiples paquetes activos para un alumno?
 - ✅ SÍ, un alumno puede tener varios paquetes simultáneamente
 - Al registrar asistencia, eliges cuál usar
 
-### ¿Qué pasa si marco asistencia con paquete equivocado?
+#### ¿Qué pasa si marco asistencia con paquete equivocado?
 - Puedes editar la asistencia
 - El sistema revierte el descuento del paquete anterior
 - Y descuenta del nuevo paquete seleccionado
 
-### ¿Puedo pagar a un profesor fuera del ciclo mensual?
+#### ¿Puedo pagar a un profesor fuera del ciclo mensual?
 - ✅ Sí, puedes liquidar y pagar cuando quieras
 - ⚠️ Recomendado: esperar a fin de mes para un solo pago
 
-### ¿Qué hago si liquidé por error?
+#### ¿Qué hago si liquidé por error?
 - Si NO has pagado todavía: Puedes agregar más clases
 - Si YA pagaste: Requiere soporte técnico para revertir
 
-### ¿Cómo manejo clases privadas vs grupales?
+#### ¿Cómo manejo clases privadas vs grupales?
 - Son tipos de clase diferentes
 - Paquetes privados solo para clases privadas
 - Paquetes grupales solo para clases grupales
 - No se pueden mezclar
+
+---
+
+### Sistema Multi-Sede
+
+#### ¿Cómo funcionan las sedes en el sistema?
+- El sistema tiene 2 sedes: **Medellín** y **Manizales**
+- Cada registro (alumno, pago, clase) pertenece a UNA sede
+- Los datos están completamente separados entre sedes
+- Puedes ver datos consolidados o filtrar por sede
+
+#### ¿Cómo se asigna la sede a un nuevo alumno?
+- **Automáticamente:** Hereda la sede del administrador que lo crea
+- Si Jorge (admin de Medellín) crea un alumno → El alumno queda en Medellín
+- **No se puede cambiar** después de creado (sin soporte técnico)
+
+#### ¿Puedo cambiar la sede de un alumno?
+- ❌ **NO** desde la interfaz del sistema
+- ⚠️ Requiere soporte técnico y actualización en base de datos
+- **Alternativa:** Crear nuevo usuario en la sede correcta
+
+#### ¿Un alumno puede usar sus clases en cualquier sede?
+- ❌ **NO**
+- Los paquetes están vinculados a la sede donde se compraron
+- Un alumno de Medellín NO puede usar sus clases en Manizales
+- **Solución:** Si se muda, crear nuevo usuario en la nueva sede
+
+#### ¿Un profesor puede trabajar en ambas sedes?
+- ✅ **SÍ**, pero necesita 2 usuarios:
+  - `profesor.medellin@chetango.com` (Sede Medellín)
+  - `profesor.manizales@chetango.com` (Sede Manizales)
+- Cada usuario tiene su propia liquidación mensual
+- Cada sede paga independientemente
+
+#### ¿Cómo filtro por sede en el Dashboard?
+- Usa las **pestañas superiores:**
+  - **Todas las Sedes:** Vista consolidada
+  - **Medellín:** Solo datos de Medellín
+  - **Manizales:** Solo datos de Manizales
+- Los KPIs y gráficos se actualizan automáticamente
+
+#### ¿Dónde más puedo filtrar por sede?
+Las siguientes páginas tienen filtro de sede:
+- **Dashboard** (`/`): Pestañas horizontales
+- **Pagos** (`/admin/pagos`): Dropdown superior derecho
+- **Usuarios** (`/admin/usuarios`): Dropdown junto a búsqueda
+- **Reportes** (`/admin/reportes`): Dropdown en barra de herramientas
+
+#### ¿Los reportes incluyen ambas sedes?
+- Depende del filtro seleccionado:
+  - **Todas las Sedes:** Reporta datos consolidados
+  - **Sede específica:** Solo esa sede
+- Los reportes financieros muestran **desglose comparativo** entre sedes
+
+#### ¿Puedo ver cuánto gana cada sede?
+- ✅ **SÍ**, en el Dashboard:
+  - Vista "Todas las Sedes" muestra desglose:
+    - Ingresos Medellín vs Manizales
+    - Egresos Medellín vs Manizales
+    - Utilidad Medellín vs Manizales
+  - Total consolidado al final
+
+#### ¿La liquidación de profesores se hace por sede?
+- ✅ **SÍ**
+- Cada profesor tiene liquidaciones independientes por sede
+- Un profesor que trabaja en ambas sedes tiene 2 liquidaciones mensuales
+- Los pagos se hacen separadamente
+
+#### ¿Qué pasa con los datos históricos antes de multi-sede?
+- Todos los datos existentes se asignaron a **Sede Medellín** (sede original)
+- Los nuevos registros se asignan según la sede del administrador
+- No hay pérdida de información
+
+#### Si creo una clase en Medellín, ¿pueden asistir alumnos de Manizales?
+- ❌ **NO**
+- La clase hereda la sede del profesor que la dicta
+- Solo alumnos de la misma sede pueden registrar asistencia
+- **Razón:** Separación de contabilidad y operaciones por sede
 
 ---
 
@@ -2160,6 +2473,12 @@ El alumno debe pagar nuevo paquete
 | **Estado Liquidado** | Incluido en liquidación mensual |
 | **Estado Pagado** | Profesor recibió el dinero |
 | **Vigencia** | Días que dura un paquete desde su activación |
+| **Sede** | Ubicación física (Medellín o Manizales) |
+| **Multi-Sede** | Sistema que gestiona múltiples ubicaciones |
+| **Herencia de Sede** | Asignación automática de sede a registros nuevos |
+| **Filtro de Sede** | Selector para ver datos de una sede específica |
+| **Tenant** | En contexto SaaS, cada academia independiente |
+| **Consolidado** | Vista que agrupa datos de todas las sedes |
 
 ---
 
@@ -2198,8 +2517,11 @@ INICIO DE MES:
 
 ### Checklist de Operación Mensual
 
+**Por Sede (repetir para Medellín y Manizales):**
+
 ```
 ☐ Semana 1:
+   ├─ ☐ Filtrar por sede en dashboard
    ├─ ☐ Registrar pagos de renovaciones
    ├─ ☐ Crear clases del mes
    └─ ☐ Aprobar pagos de profesores de semana anterior
@@ -2215,30 +2537,37 @@ INICIO DE MES:
    └─ ☐ Preparar cierre de mes
 
 ☐ Semana 4 (Fin de mes):
-   ├─ ☐ Aprobar TODOS los pagos pendientes
-   ├─ ☐ Liquidar mes para TODOS los profesores
-   ├─ ☐ Generar reporte mensual
+   ├─ ☐ Aprobar TODOS los pagos pendientes (por sede)
+   ├─ ☐ Liquidar mes para TODOS los profesores (por sede)
+   ├─ ☐ Generar reporte mensual por sede
    └─ ☐ Revisar estadísticas
 
 ☐ Inicio mes siguiente:
-   ├─ ☐ Hacer transferencias bancarias
+   ├─ ☐ Hacer transferencias bancarias (separadas por sede)
    ├─ ☐ Registrar pagos en sistema
    └─ ☐ Enviar comprobantes a profesores
+
+☐ Consolidación (ambas sedes):
+   ├─ ☐ Generar reporte consolidado
+   ├─ ☐ Comparar performance Medellín vs Manizales
+   └─ ☐ Revisar utilidad total
 ```
 
 ---
 
-## 📞 Soporte y Contacto
-
-### Soporte Técnico
-- Email: soporte@chetango.com
-- Teléfono: +57 XXX XXX XXXX
-- Horario: Lunes a Viernes, 9am - 6pm
-
-### Documentación Adicional
+## Plan de Escalamiento SaaS](./PLAN-ESCALAMIENTO-SAAS.md)
 - [Manual Técnico de la API](./api/README.md)
 - [Guía de Despliegue](./DEPLOYMENT-STRATEGY.md)
 - [Proceso de Nómina Detallado](./business/payroll-process.md)
+- [Gestión de Paquetes Privados](./business/package-management.md)
+
+---
+
+**Fin del Manual del Administrador**
+
+*Versión 2.0 - Febrero 2026*  
+*Sistema Chetango - Academia de Tango Multi-Sede*  
+*Actualizado con funcionalidad Multi-Sede (Medellín y Manizales)iness/payroll-process.md)
 - [Gestión de Paquetes Privados](./business/package-management.md)
 
 ---
