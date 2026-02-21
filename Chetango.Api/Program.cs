@@ -21,6 +21,8 @@ using Chetango.Application.Alumnos;
 using Chetango.Application.Profesores;
 using Chetango.Application.Paquetes.Commands.CrearPaquete;
 using Chetango.Application.Paquetes.Commands.CrearTipoPaquete;
+using Chetango.Application.Paquetes.Commands.ActualizarTipoPaquete;
+using Chetango.Application.Paquetes.Commands.ToggleTipoPaqueteActivo;
 using Chetango.Application.Paquetes.Commands.EditarPaquete;
 using Chetango.Application.Paquetes.Commands.CongelarPaquete;
 using Chetango.Application.Paquetes.Commands.DescongelarPaquete;
@@ -311,7 +313,11 @@ if (app.Environment.IsDevelopment())
 // CORS debe ir ANTES de otros middlewares
 app.UseCors("DefaultCors");
 
-app.UseHttpsRedirection();
+// Solo redirigir a HTTPS en producción (no en QA/Development local)
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 // Servir archivos estáticos (imágenes, comprobantes, avatares, etc.)
 app.UseStaticFiles();
@@ -511,6 +517,29 @@ app.MapPost("/api/tipos-paquete", async (CrearTipoPaqueteCommand command, IMedia
     var result = await mediator.Send(command);
     return result.Succeeded 
         ? Results.Created($"/api/tipos-paquete/{result.Value}", new { id = result.Value })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PUT /api/tipos-paquete/{id} - Actualizar un tipo de paquete (solo Admin)
+app.MapPut("/api/tipos-paquete/{id:guid}", async (Guid id, ActualizarTipoPaqueteCommand command, IMediator mediator) =>
+{
+    // Crear comando con el ID de la URL si no coincide
+    var commandToSend = command.IdTipoPaquete == Guid.Empty || command.IdTipoPaquete != id
+        ? command with { IdTipoPaquete = id }
+        : command;
+    
+    var result = await mediator.Send(commandToSend);
+    return result.Succeeded 
+        ? Results.Ok()
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PATCH /api/tipos-paquete/{id}/toggle-active - Activar/Desactivar tipo de paquete (solo Admin)
+app.MapPatch("/api/tipos-paquete/{id:guid}/toggle-active", async (Guid id, IMediator mediator) =>
+{
+    var result = await mediator.Send(new ToggleTipoPaqueteActivoCommand(id));
+    return result.Succeeded 
+        ? Results.Ok(new { activo = result.Value })
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
@@ -1384,6 +1413,27 @@ app.MapPost("/api/pagos/{id:guid}/verificar", async (
     var result = await mediator.Send(command);
     return result.Succeeded 
         ? Results.Ok(new { success = true }) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// DELETE /api/pagos/{id} - Eliminar pago (soft delete) (AdminOnly)
+app.MapDelete("/api/pagos/{id:guid}", async (
+    Guid id,
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var command = new EliminarPagoCommand(id, emailClaim);
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 

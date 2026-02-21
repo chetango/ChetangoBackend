@@ -27,6 +27,15 @@ public class PagoConfiguration : IEntityTypeConfiguration<Pago>
             .HasDefaultValueSql("SUSER_SNAME()");
         builder.Property(p => p.UsuarioModificacion)
             .HasMaxLength(256);
+        
+        // Soft Delete
+        builder.Property(p => p.Eliminado)
+            .HasDefaultValue(false);
+        builder.Property(p => p.UsuarioEliminacion)
+            .HasMaxLength(256);
+
+        // Query Filter para excluir pagos eliminados por defecto
+        builder.HasQueryFilter(p => !p.Eliminado);
 
         builder.HasOne(p => p.Alumno)
             .WithMany(a => a.Pagos)

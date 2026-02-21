@@ -75,6 +75,7 @@ public class GetPagosDeAlumnoQueryHandler : IRequestHandler<GetPagosDeAlumnoQuer
             .Take(request.PageSize)
             .Select(p => new PagoDTO(
                 p.IdPago,
+                p.IdAlumno ?? Guid.Empty,
                 p.FechaPago,
                 p.MontoTotal,
                 p.MetodoPago.Nombre,

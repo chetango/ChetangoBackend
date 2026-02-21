@@ -32,6 +32,11 @@ namespace Chetango.Domain.Entities
         public string UsuarioCreacion { get; set; } = null!;
         public string? UsuarioModificacion { get; set; }
 
+        // Soft Delete
+        public bool Eliminado { get; set; } = false;
+        public DateTime? FechaEliminacion { get; set; }
+        public string? UsuarioEliminacion { get; set; }
+
         // Relaciones
         public ICollection<Paquete> Paquetes { get; set; } = new List<Paquete>();
     }
