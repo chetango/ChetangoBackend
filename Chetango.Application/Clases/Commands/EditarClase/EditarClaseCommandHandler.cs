@@ -30,9 +30,33 @@ public class EditarClaseCommandHandler : IRequestHandler<EditarClaseCommand, Res
                 return Result<bool>.Failure("No tienes permiso para editar esta clase.");
         }
 
-        // 3. Validar que la fecha es futura
-        if (request.FechaHoraInicio <= DateTime.Now)
-            return Result<bool>.Failure("La clase debe programarse para una fecha y hora futura.");
+        // 3. Validar fecha según estado de la clase
+        var ahora = DateTime.Now;
+        var fechaHoraOriginal = new DateTime(clase.Fecha.Year, clase.Fecha.Month, clase.Fecha.Day)
+            .Add(clase.HoraInicio);
+        var claseYaPaso = fechaHoraOriginal <= ahora;
+
+        // Si la clase ya pasó o es hoy, no permitir cambiar fecha/hora
+        if (claseYaPaso)
+        {
+            // Validar que NO se está intentando cambiar la fecha/hora
+            if (fechaHoraOriginal != request.FechaHoraInicio)
+            {
+                return Result<bool>.Failure(
+                    "No se puede cambiar la fecha/hora de una clase que ya pasó o está en curso. " +
+                    "Puedes modificar profesores, alumnos, cupo u observaciones."
+                );
+            }
+            // Si no cambia fecha/hora, permitir editar otros datos (profesores, alumnos, etc.)
+        }
+        else
+        {
+            // Clase futura: validar que la nueva fecha también sea futura
+            if (request.FechaHoraInicio <= ahora)
+            {
+                return Result<bool>.Failure("La clase debe programarse para una fecha y hora futura.");
+            }
+        }
 
         // 4. Validar duración mínima
         if (request.DuracionMinutos < 30)
