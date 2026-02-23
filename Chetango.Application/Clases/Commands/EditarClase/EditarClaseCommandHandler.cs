@@ -1,3 +1,4 @@
+using Chetango.Application.Clases.Commands.CrearClase;
 using Chetango.Application.Common;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
