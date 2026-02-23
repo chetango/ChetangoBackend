@@ -25,6 +25,19 @@ public class EditarClaseCommandHandler : IRequestHandler<EditarClaseCommand, Res
         if (clase is null)
             return Result<bool>.Failure("La clase especificada no existe.");
 
+        // 1a. VALIDACIÓN CRÍTICA: Verificar si la clase ya fue completada y tiene pagos generados
+        if (clase.Profesores.Any())
+        {
+            var tienePagosGenerados = clase.Profesores.Any(cp => cp.EstadoPago != "Pendiente");
+            if (tienePagosGenerados)
+            {
+                return Result<bool>.Failure(
+                    "No se puede editar los profesores de esta clase porque ya fue completada y se generaron los pagos. " +
+                    "Si necesita realizar cambios, cree una nueva clase."
+                );
+            }
+        }
+
         // 1b. Normalizar y validar lista de profesores
         var profesoresRequest = request.Profesores ?? new List<ProfesorClaseRequest>();
         
