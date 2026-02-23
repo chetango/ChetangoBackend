@@ -10,6 +10,10 @@ namespace Chetango.Domain.Entities.Estados
         public string? Descripcion { get; set; }
         public bool Activo { get; set; } = true;
 
+        // Tarifa especial para pago a profesores (ej: Elenco Manizales = 15000)
+        // NULL = usa la tarifa normal del profesor
+        public decimal? TarifaProfesor { get; set; }
+
         // Relaciones
         public ICollection<Paquete> Paquetes { get; set; } = new List<Paquete>();
     }

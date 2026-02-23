@@ -1,0 +1,12 @@
+version:v1.0
+Name [displayName] Required,User name [userPrincipalName] Required,Initial password [passwordProfile] Required,Block sign in (Yes/No) [accountEnabled] Required,First name [givenName],Last name [surname],Job title [jobTitle],Department [department]
+Mariana Cadavid,mariana.cadavid@corporacionchetango.com,Chetango2026!,No,Mariana,Cadavid,,
+Juan Jose Saldarriaga,juan.saldarriaga@corporacionchetango.com,Chetango2026!,No,Juan Jose,Saldarriaga,,
+Jessica Fernanda Díaz,jessica.diaz@corporacionchetango.com,Chetango2026!,No,Jessica Fernanda,Díaz,,
+Miguel Angel Diaz,miguel.diaz@corporacionchetango.com,Chetango2026!,No,Miguel Angel,Diaz,,
+Nikol Dahiana Ruiz,nikol.ruiz@corporacionchetango.com,Chetango2026!,No,Nikol Dahiana,Ruiz,,
+Edwin Santiago Ocampo,edwin.ocampo@corporacionchetango.com,Chetango2026!,No,Edwin Santiago,Ocampo,,
+Juanita Lopez,juanita.lopez@corporacionchetango.com,Chetango2026!,No,Juanita,Lopez,,
+Adrian Sarmiento,adrian.sarmiento@corporacionchetango.com,Chetango2026!,No,Adrian,Sarmiento,,
+Alejandro Cortes,alejandro.cortes@corporacionchetango.com,Chetango2026!,No,Alejandro,Cortes,,
+Paula Andrea Betancourth,paula.betancourth@corporacionchetango.com,Chetango2026!,No,Paula Andrea,Betancourth,,

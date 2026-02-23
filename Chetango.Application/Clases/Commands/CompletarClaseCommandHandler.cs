@@ -24,6 +24,9 @@ public class CompletarClaseCommandHandler : IRequestHandler<CompletarClaseComman
             .Include(c => c.Profesores) // Cargar profesores con nuevo sistema
                 .ThenInclude(cp => cp.Profesor)
             .Include(c => c.TipoClase)
+            .Include(c => c.Asistencias) // Cargar asistencias para verificar paquetes
+                .ThenInclude(a => a.PaqueteUsado)
+                .ThenInclude(p => p.TipoPaquete)
             .FirstOrDefaultAsync(c => c.IdClase == request.IdClase, cancellationToken);
 
         if (clase == null)
@@ -41,20 +44,53 @@ public class CompletarClaseCommandHandler : IRequestHandler<CompletarClaseComman
         // Calcular duración en horas
         var duracion = (clase.HoraFin - clase.HoraInicio).TotalHours;
 
+        // Determinar tarifa especial si todos los alumnos tienen un paquete con TarifaProfesor configurada
+        decimal? tarifaEspecial = null;
+        if (clase.Asistencias.Any())
+        {
+            var asistenciasConPaquete = clase.Asistencias
+                .Where(a => a.IdPaqueteUsado.HasValue && a.PaqueteUsado != null)
+                .ToList();
+
+            if (asistenciasConPaquete.Any())
+            {
+                // Verificar si TODOS los alumnos tienen el mismo tipo de paquete con tarifa especial
+                var primerTipoPaquete = asistenciasConPaquete.First().PaqueteUsado!.TipoPaquete;
+                var todosDelMismoTipo = asistenciasConPaquete.All(a => 
+                    a.PaqueteUsado!.IdTipoPaquete == primerTipoPaquete.Id);
+
+                if (todosDelMismoTipo && primerTipoPaquete.TarifaProfesor.HasValue)
+                {
+                    // Todos los alumnos tienen paquete con tarifa especial (ej: Elenco)
+                    tarifaEspecial = primerTipoPaquete.TarifaProfesor.Value;
+                }
+            }
+        }
+
         // NUEVO SISTEMA: Si la clase ya tiene ClaseProfesor, solo actualizar tarifas
         if (clase.Profesores.Any())
         {
             // Los profesores ya están registrados (nuevo sistema)
-            // Solo necesitamos actualizar TotalPago según duración si es necesario
+            // Recalcular TotalPago para TODOS los profesores que estén en estado Pendiente
             foreach (var claseProfesor in clase.Profesores)
             {
-                // Verificar si ya tiene pago calculado
-                if (claseProfesor.TotalPago == 0 || claseProfesor.TotalPago == claseProfesor.TarifaProgramada)
+                // Solo recalcular si el pago aún está pendiente
+                // Esto asegura que TODOS los profesores asignados reciban su pago correctamente
+                if (claseProfesor.EstadoPago == "Pendiente")
                 {
-                    // Recalcular basado en duración
-                    claseProfesor.TotalPago = (claseProfesor.TarifaProgramada + claseProfesor.ValorAdicional) * (decimal)duracion;
+                    // Aplicar tarifa especial si existe (ej: Elenco = 15000), sino usar la tarifa programada
+                    var tarifaAUsar = tarifaEspecial ?? claseProfesor.TarifaProgramada;
+                    
+                    // Actualizar la tarifa si se está usando tarifa especial
+                    if (tarifaEspecial.HasValue)
+                    {
+                        claseProfesor.TarifaProgramada = tarifaEspecial.Value;
+                    }
+                    
+                    // Recalcular basado en duración real de la clase
+                    claseProfesor.TotalPago = (tarifaAUsar + claseProfesor.ValorAdicional) * (decimal)duracion;
                 }
-                // Si TotalPago ya estaba calculado, respetarlo (podría ser ajuste manual)
+                // Si ya fue aprobado/liquidado/pagado, no modificar (preserva ajustes manuales)
             }
         }
         else
@@ -68,7 +104,7 @@ public class CompletarClaseCommandHandler : IRequestHandler<CompletarClaseComman
             if (rolPrincipal == null)
                 return Result<bool>.Failure("No se encontró el rol Principal");
 
-            // Generar pago para el profesor principal
+            // Generar pago para profesor principal
             if (clase.IdProfesorPrincipal.HasValue)
             {
                 var profesorPrincipal = await _context.Profesores
@@ -77,8 +113,8 @@ public class CompletarClaseCommandHandler : IRequestHandler<CompletarClaseComman
 
                 if (profesorPrincipal != null)
                 {
-                    // USAR NUEVO SISTEMA: TarifaActual del profesor
-                    decimal tarifaProfesor = profesorPrincipal.TarifaActual;
+                    // Usar tarifa especial si existe (ej: Elenco), sino usar tarifa normal del profesor
+                    decimal tarifaProfesor = tarifaEspecial ?? profesorPrincipal.TarifaActual;
 
                     // Fallback al sistema antiguo si no tiene tarifa configurada
                     if (tarifaProfesor == 0)
@@ -129,8 +165,8 @@ public class CompletarClaseCommandHandler : IRequestHandler<CompletarClaseComman
                     var profesorMonitor = profesoresMonitores.FirstOrDefault(p => p.IdProfesor == monitorClase.IdProfesor);
                     if (profesorMonitor == null) continue;
                     
-                    // USAR NUEVO SISTEMA: TarifaActual del profesor
-                    decimal tarifaMonitor = profesorMonitor.TarifaActual;
+                    // Usar tarifa especial si existe (ej: Elenco), sino usar tarifa normal del profesor
+                    decimal tarifaMonitor = tarifaEspecial ?? profesorMonitor.TarifaActual;
 
                     // Fallback al sistema antiguo si no tiene tarifa configurada
                     if (tarifaMonitor == 0)
