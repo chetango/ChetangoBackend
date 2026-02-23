@@ -3,11 +3,17 @@ using MediatR;
 
 namespace Chetango.Application.Clases.Commands.EditarClase;
 
+// DTO para especificar profesor con su rol (reutilizado de CrearClase)
+public record ProfesorClaseRequest(
+    Guid IdProfesor,
+    string RolEnClase // "Principal" | "Monitor"
+);
+
 // Command para editar una clase existente
 public record EditarClaseCommand(
     Guid IdClase,
     Guid IdTipoClase,
-    Guid IdProfesor,
+    List<ProfesorClaseRequest> Profesores, // Lista de profesores con sus roles
     DateTime FechaHoraInicio,
     int DuracionMinutos,
     int CupoMaximo,

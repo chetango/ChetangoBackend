@@ -852,10 +852,13 @@ app.MapPut("/api/clases/{id:guid}", async (
     var esAdmin = roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
                               || string.Equals(r, "Administrador", StringComparison.OrdinalIgnoreCase));
 
+    // Convertir ProfesorClaseRequestDTO a ProfesorClaseRequest (del command)
+    var profesoresCommand = dto.Profesores?.Select(p => new ProfesorClaseRequest(p.IdProfesor, p.RolEnClase)).ToList();
+
     var command = new EditarClaseCommand(
         IdClase: id,
         IdTipoClase: dto.IdTipoClase,
-        IdProfesor: dto.IdProfesor,
+        Profesores: profesoresCommand ?? new List<ProfesorClaseRequest>(),
         FechaHoraInicio: dto.FechaHoraInicio,
         DuracionMinutos: dto.DuracionMinutos,
         CupoMaximo: dto.CupoMaximo,

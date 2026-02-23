@@ -42,12 +42,25 @@ Instance: https://8a57ec5a-e2e3-44ad-9494-77fbc7467251.ciamlogin.com/
 
 ### **Estrategia de Ramas:**
 
+**BACKEND (.NET API):**
 ```
 feature/* → develop → main → PRODUCCIÓN (auto-deploy)
 ```
 
+**FRONTEND (React):**
+```
+feature/* → develop → PRODUCCIÓN (auto-deploy) ✅
+```
+
+⚠️ **Diferencia Importante:** 
+- **Backend:** `develop` es rama de integración, `main` despliega a producción
+- **Frontend:** `develop` despliega DIRECTAMENTE a producción
+
+---
+
 ### **1. Desarrollo de Features**
 
+**Backend:**
 ```bash
 # Crear rama feature
 git checkout develop
@@ -61,8 +74,22 @@ dotnet run --project Chetango.Api/Chetango.Api.csproj --launch-profile https-qa
 # Autenticar con usuarios @chetangoprueba.onmicrosoft.com
 ```
 
-### **2. Pull Request a Develop**
+**Frontend:**
+```bash
+# Crear rama feature
+git checkout develop
+git pull origin develop
+git checkout -b feature/nombre-funcionalidad
 
+# Desarrollar localmente
+npm run dev
+
+# Probar en: http://localhost:5173
+```
+
+### **2. Pull Request a Develop (o Commit Directo)**
+
+**Backend:**
 ```bash
 # Commit y push
 git add .
@@ -73,10 +100,22 @@ git push origin feature/nombre-funcionalidad
 # Revisar código, aprobar, merge
 ```
 
-**⚠️ Importante:** Hacer merge a `develop` **NO despliega automáticamente**.
+**⚠️ Backend:** Hacer merge a `develop` **NO despliega automáticamente**.
+
+**Frontend:**
+```bash
+# Commit y push a develop
+git checkout develop
+git add .
+git commit -m "feat: descripción de la funcionalidad"
+git push origin develop
+```
+
+**✅ Frontend:** Push a `develop` **SÍ DESPLIEGA AUTOMÁTICAMENTE A PRODUCCIÓN** ⚡
 
 ### **3. Promoción a Producción**
 
+**SOLO para Backend (.NET API):**
 ```bash
 # Cuando estés 100% seguro
 git checkout main
@@ -85,10 +124,16 @@ git merge develop
 git push origin main
 ```
 
-**✅ Resultado:** GitHub Actions automáticamente:
+**✅ Resultado (Backend):** GitHub Actions automáticamente:
 1. Compila el proyecto (.NET 9)
 2. Ejecuta tests (si existen)
 3. Publica a `chetango-api-prod`
+4. Deployment completo en ~2-3 minutos
+
+**✅ Resultado (Frontend):** Ya desplegado desde `develop`
+1. Compila React (npm run build)
+2. Despliega a Azure Static Web App
+3. URL: https://app.corporacionchetango.com
 4. Deployment completo en ~2-3 minutos
 
 ---

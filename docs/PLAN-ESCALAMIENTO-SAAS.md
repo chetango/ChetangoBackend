@@ -1,7 +1,7 @@
 # 📊 PLAN DE ESCALAMIENTO CHETANGO SAAS
 
-**Versión:** 1.0  
-**Fecha:** 20 de Febrero de 2026  
+**Versión:** 1.1  
+**Fecha:** 21 de Febrero de 2026  
 **Autor:** Equipo Técnico Chetango  
 **Propósito:** Guía de infraestructura, costos y escalamiento para convertir Chetango en plataforma SaaS multi-tenant
 
@@ -12,6 +12,10 @@
 1. [Situación Actual](#1-situación-actual)
 2. [Visión SaaS y Objetivos](#2-visión-saas-y-objetivos)
 3. [Arquitectura Multi-Tenant](#3-arquitectura-multi-tenant)
+   - 3.1 Modelo Recomendado
+   - 3.2 Componentes Clave
+   - 3.3 Flujo de Autenticación
+   - **3.4 Personalización Dinámica (Branding)** ⭐ NUEVO
 4. [Plan de Escalamiento por Etapas](#4-plan-de-escalamiento-por-etapas)
 5. [Especificaciones Técnicas por Fase](#5-especificaciones-técnicas-por-fase)
 6. [Análisis de Costos y Rentabilidad](#6-análisis-de-costos-y-rentabilidad)
@@ -19,6 +23,7 @@
 8. [Métricas de Monitoreo](#8-métricas-de-monitoreo)
 9. [Plan de Contingencia](#9-plan-de-contingencia)
 10. [Anexos Técnicos](#10-anexos-técnicos)
+11. **[Guía Rápida: Onboarding de Nuevo Cliente](#guía-rápida-onboarding-de-nuevo-cliente)** ⭐ NUEVO
 
 ---
 
@@ -363,6 +368,480 @@ WHERE TenantId = 'salsa-cali-002'
 
 **7. Usuario obtiene datos:**
 Todas las queries automáticamente filtran por `TenantId = 'salsa-cali-002'`
+
+### 3.4 Personalización Dinámica (Branding) por Tenant
+
+**¿Cómo mostrar logos y colores diferentes según el cliente?**
+
+Este es un patrón **estándar de la industria** usado por Shopify, Slack, Zendesk, Notion, y prácticamente todos los SaaS multi-tenant exitosos.
+
+#### **A. Almacenamiento de Personalización en Tabla Tenants**
+
+La tabla `Tenants` ya incluye columnas para personalización:
+
+```sql
+-- Columnas de personalización (ya incluidas en diseño de Tenants)
+LogoUrl NVARCHAR(500),              -- URL del logo del cliente
+ColorPrimario NVARCHAR(7),          -- Color principal en hex (#FF5733)
+ColorSecundario NVARCHAR(7),        -- Color secundario en hex
+ColorAccent NVARCHAR(7),            -- Color de acento
+NombreComercial NVARCHAR(200),     -- Nombre para mostrar
+FaviconUrl NVARCHAR(500),          -- Favicon personalizado
+```
+
+**Ejemplo de datos:**
+```sql
+INSERT INTO Tenants (...) VALUES
+(
+    'salsa-cali-002',
+    'Academia Salsa Caleña',
+    'salsa-cali',
+    'Profesional',
+    'Activo',
+    ...
+    'https://storage.chetango.com/logos/salsa-cali.png',  -- LogoUrl
+    '#FF5733',                                             -- ColorPrimario (naranja)
+    '#3498DB',                                             -- ColorSecundario (azul)
+    '#FFD700',                                             -- ColorAccent (dorado)
+    'Academia Salsa Caleña - La Mejor de Cali',          -- NombreComercial
+    'https://storage.chetango.com/favicons/salsa-cali.ico' -- FaviconUrl
+);
+```
+
+#### **B. Endpoint Público para Obtener Personalización**
+
+**API: `GET /api/tenants/by-subdomain/{subdomain}`**
+
+```csharp
+[HttpGet("by-subdomain/{subdomain}")]
+[AllowAnonymous] // ← Importante: público para que login pueda acceder
+public async Task<ActionResult<TenantBrandingDto>> GetBySubdomain(string subdomain)
+{
+    var tenant = await _context.Tenants
+        .Where(t => t.Subdomain == subdomain)
+        .Where(t => t.Estado == "Activo")
+        .Select(t => new TenantBrandingDto
+        {
+            Id = t.Id,
+            Nombre = t.Nombre,
+            NombreComercial = t.NombreComercial,
+            LogoUrl = t.LogoUrl,
+            ColorPrimario = t.ColorPrimario ?? "#FF6B6B",      // Default Chetango
+            ColorSecundario = t.ColorSecundario ?? "#4ECDC4",
+            ColorAccent = t.ColorAccent ?? "#FFE66D",
+            FaviconUrl = t.FaviconUrl,
+            Plan = t.Plan
+        })
+        .FirstOrDefaultAsync();
+    
+    if (tenant == null)
+        return NotFound(new { message = "Academia no encontrada" });
+    
+    return Ok(tenant);
+}
+```
+
+#### **C. Frontend: Detección de Subdomain y Carga de Personalización**
+
+**1. Crear contexto de Tenant (TenantContext.tsx):**
+
+```typescript
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+interface TenantBranding {
+  id: string;
+  nombre: string;
+  nombreComercial?: string;
+  logoUrl?: string;
+  colorPrimario: string;
+  colorSecundario: string;
+  colorAccent: string;
+  faviconUrl?: string;
+  plan: string;
+}
+
+const TenantContext = createContext<TenantBranding | null>(null);
+
+export function TenantProvider({ children }: { children: ReactNode }) {
+  const [tenant, setTenant] = useState<TenantBranding | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTenant() {
+      try {
+        // Detectar subdomain
+        const hostname = window.location.hostname;
+        const parts = hostname.split('.');
+        
+        // Si es localhost o IP, usar subdomain por defecto
+        const subdomain = hostname === 'localhost' || hostname.startsWith('127.') || hostname.startsWith('192.')
+          ? 'corporacionchetango'  // Default para desarrollo
+          : parts[0];
+
+        // Cargar info del tenant desde API
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/tenants/by-subdomain/${subdomain}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Tenant no encontrado');
+        }
+
+        const data = await response.json();
+        setTenant(data);
+
+        // Aplicar personalización global
+        applyBranding(data);
+      } catch (error) {
+        console.error('Error cargando tenant:', error);
+        // Usar valores por defecto de Chetango
+        const defaultTenant: TenantBranding = {
+          id: 'default',
+          nombre: 'Chetango',
+          colorPrimario: '#FF6B6B',
+          colorSecundario: '#4ECDC4',
+          colorAccent: '#FFE66D',
+          plan: 'Básico'
+        };
+        setTenant(defaultTenant);
+        applyBranding(defaultTenant);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTenant();
+  }, []);
+
+  function applyBranding(tenant: TenantBranding) {
+    // Aplicar CSS variables globalmente
+    document.documentElement.style.setProperty('--color-primary', tenant.colorPrimario);
+    document.documentElement.style.setProperty('--color-secondary', tenant.colorSecundario);
+    document.documentElement.style.setProperty('--color-accent', tenant.colorAccent);
+
+    // Cambiar favicon
+    if (tenant.faviconUrl) {
+      const favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+      if (favicon) {
+        favicon.href = tenant.faviconUrl;
+      }
+    }
+
+    // Cambiar título de la pestaña
+    document.title = `${tenant.nombreComercial || tenant.nombre} - Gestión Inteligente`;
+  }
+
+  if (loading) {
+    return <div className="loading-spinner">Cargando...</div>;
+  }
+
+  return (
+    <TenantContext.Provider value={tenant}>
+      {children}
+    </TenantContext.Provider>
+  );
+}
+
+export function useTenant() {
+  const context = useContext(TenantContext);
+  if (!context) {
+    throw new Error('useTenant debe usarse dentro de TenantProvider');
+  }
+  return context;
+}
+```
+
+**2. Envolver App con TenantProvider (main.tsx):**
+
+```typescript
+import { TenantProvider } from './contexts/TenantContext';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <TenantProvider>
+      <App />
+    </TenantProvider>
+  </React.StrictMode>
+);
+```
+
+**3. Usar personalización en Login (Login.tsx):**
+
+```typescript
+import { useTenant } from '@/contexts/TenantContext';
+
+export function Login() {
+  const tenant = useTenant();
+  
+  return (
+    <div className="login-page">
+      {/* Logo dinámico según tenant */}
+      <div className="logo-container">
+        {tenant.logoUrl ? (
+          <img 
+            src={tenant.logoUrl} 
+            alt={tenant.nombre}
+            className="h-20 w-auto"
+          />
+        ) : (
+          // Fallback al logo de Chetango
+          <img src="/chetango-logo.png" alt="Chetango" className="h-20 w-auto" />
+        )}
+      </div>
+      
+      {/* Título personalizado */}
+      <h1 className="text-3xl font-bold mt-4">
+        {tenant.nombreComercial || tenant.nombre}
+      </h1>
+      <p className="text-gray-600 mt-2">Sistema de Gestión Inteligente</p>
+      
+      {/* Botón con color personalizado (usa CSS variable) */}
+      <button className="btn-primary mt-8">
+        Iniciar sesión con Microsoft
+      </button>
+    </div>
+  );
+}
+```
+
+**4. CSS con variables personalizadas (globals.css):**
+
+```css
+:root {
+  /* Valores por defecto (Chetango) - se sobrescriben dinámicamente */
+  --color-primary: #FF6B6B;
+  --color-secondary: #4ECDC4;
+  --color-accent: #FFE66D;
+}
+
+/* Usar variables en todos los componentes */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 80%, black);
+}
+
+.navbar {
+  background-color: var(--color-primary);
+}
+
+.link-active {
+  color: var(--color-secondary);
+}
+
+.badge-accent {
+  background-color: var(--color-accent);
+}
+```
+
+#### **D. Desarrollo Local: Simular Diferentes Tenants**
+
+**Opción 1: Query parameter (más fácil para testing)**
+
+```typescript
+// En TenantProvider, antes del fetch
+const urlParams = new URLSearchParams(window.location.search);
+const tenantParam = urlParams.get('tenant');
+
+const subdomain = tenantParam 
+  || (hostname === 'localhost' ? 'corporacionchetango' : parts[0]);
+```
+
+**Uso:**
+```
+http://localhost:5173?tenant=salsa-cali
+http://localhost:5173?tenant=bachata-bogota
+http://localhost:5173?tenant=corporacionchetango
+```
+
+**Opción 2: Dropdown selector en desarrollo**
+
+```typescript
+{import.meta.env.DEV && (
+  <div className="fixed bottom-4 right-4 bg-white shadow-lg p-4 rounded">
+    <label>Simular Tenant:</label>
+    <select 
+      onChange={(e) => window.location.href = `?tenant=${e.target.value}`}
+      className="ml-2 border rounded px-2 py-1"
+    >
+      <option value="corporacionchetango">Corporación Chetango</option>
+      <option value="salsa-cali">Salsa Cali</option>
+      <option value="bachata-bogota">Bachata Bogotá</option>
+    </select>
+  </div>
+)}
+```
+
+#### **E. Flujo Completo: Nuevo Cliente se Registra**
+
+**Cuando una nueva academia se registra:**
+
+1. **Usuario llena formulario de registro** en `/register` (sin subdomain aún)
+2. **API crea tenant** con datos básicos + subdomain generado
+3. **API sube logo a Azure Storage** (si lo proporcionó)
+4. **API envía email de bienvenida** con link a `subdomain.chetango.com`
+5. **Usuario accede a su subdomain** → ve su logo y colores
+6. **Usuario completa onboarding** → configura más detalles
+
+**Ejemplo de proceso de registro:**
+
+```typescript
+// POST /api/tenants/register
+{
+  "nombreAcademia": "Academia Salsa Caleña",
+  "subdomain": "salsa-cali",  // Se valida que no exista
+  "emailContacto": "admin@salsacali.com",
+  "plan": "Profesional",
+  "logo": <file>,  // Opcional
+  "colorPrimario": "#FF5733"  // Opcional
+}
+
+// Backend crea tenant y retorna:
+{
+  "tenantId": "salsa-cali-002",
+  "subdomain": "salsa-cali",
+  "accessUrl": "https://salsa-cali.chetango.com",
+  "setupComplete": false
+}
+```
+
+#### **F. Panel de Configuración de Branding (Para el Cliente)**
+
+Cada cliente puede personalizar su branding desde `/admin/configuracion/branding`:
+
+```typescript
+export function BrandingSettings() {
+  const tenant = useTenant();
+  const [logo, setLogo] = useState<File | null>(null);
+  const [colors, setColors] = useState({
+    primary: tenant.colorPrimario,
+    secondary: tenant.colorSecundario,
+    accent: tenant.colorAccent
+  });
+
+  async function handleSave() {
+    const formData = new FormData();
+    if (logo) formData.append('logo', logo);
+    formData.append('colorPrimario', colors.primary);
+    formData.append('colorSecundario', colors.secondary);
+    formData.append('colorAccent', colors.accent);
+
+    await fetch(`/api/tenants/${tenant.id}/branding`, {
+      method: 'PUT',
+      body: formData
+    });
+
+    // Recargar para aplicar cambios
+    window.location.reload();
+  }
+
+  return (
+    <div className="branding-settings">
+      <h2>Personalización de Marca</h2>
+      
+      <div className="form-group">
+        <label>Logo de la Academia</label>
+        <input 
+          type="file" 
+          accept="image/*"
+          onChange={(e) => setLogo(e.target.files?.[0] || null)}
+        />
+        <p className="help-text">
+          Recomendado: PNG transparente, 400x100px
+        </p>
+      </div>
+
+      <div className="form-group">
+        <label>Color Principal</label>
+        <input 
+          type="color" 
+          value={colors.primary}
+          onChange={(e) => setColors({...colors, primary: e.target.value})}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Color Secundario</label>
+        <input 
+          type="color" 
+          value={colors.secondary}
+          onChange={(e) => setColors({...colors, secondary: e.target.value})}
+        />
+      </div>
+
+      <button onClick={handleSave} className="btn-primary">
+        Guardar Cambios
+      </button>
+
+      <div className="preview mt-4">
+        <h3>Vista Previa</h3>
+        <div 
+          className="preview-card" 
+          style={{ 
+            backgroundColor: colors.primary,
+            color: 'white',
+            padding: '2rem',
+            borderRadius: '8px'
+          }}
+        >
+          <h4>Así se verá tu academia</h4>
+          <button style={{ backgroundColor: colors.secondary }}>
+            Botón Ejemplo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+#### **G. Niveles de Personalización por Plan**
+
+| Plan | Logo | Colores | Favicon | Whitelabel* |
+|------|------|---------|---------|-------------|
+| **Básico** | ✅ | ❌ | ❌ | ❌ |
+| **Profesional** | ✅ | ✅ (2 colores) | ✅ | ❌ |
+| **Enterprise** | ✅ | ✅ (3+ colores) | ✅ | ✅ |
+
+*Whitelabel = Ocultar completamente marca Chetango del footer/documentación
+
+#### **H. Checklist: Agregar Nuevo Cliente con Personalización**
+
+**Para el equipo cuando un cliente nuevo se una:**
+
+1. ✅ **Validar subdomain disponible** (no duplicado)
+2. ✅ **Crear registro en tabla Tenants** con plan correspondiente
+3. ✅ **Subir logo a Azure Storage** (si lo proporciona)
+   - Path: `/tenants/{tenantId}/logo.png`
+   - Actualizar `LogoUrl` en DB
+4. ✅ **Configurar colores** (o usar defaults)
+5. ✅ **Verificar DNS** para `{subdomain}.chetango.com`
+6. ✅ **Probar acceso** en navegador incógnito
+7. ✅ **Enviar email de bienvenida** con credenciales
+8. ✅ **Agendar onboarding call** (para plan Profesional/Enterprise)
+
+**Comando de prueba rápida:**
+```sql
+-- Verificar que tenant se vea correctamente
+SELECT 
+    Subdomain,
+    Nombre,
+    LogoUrl,
+    ColorPrimario,
+    Estado
+FROM Tenants
+WHERE Subdomain = 'nuevo-cliente';
+```
+
+**Probar en navegador:**
+```
+https://nuevo-cliente.chetango.com
+→ Debe cargar con logo y colores del cliente
+→ Sin errores en consola
+```
 
 ---
 
@@ -1075,7 +1554,19 @@ CAC objetivo = $8,400,000 / 5 = $1,680,000 COP máximo
 - [ ] Crear página de selección de plan (`/plans`)
 - [ ] Implementar integración de pagos (Wompi/Stripe)
 - [ ] Crear dashboard de tenant admin (`/admin/settings`)
-- [ ] Personalización de logo y colores por tenant
+
+**Frontend - Personalización Dinámica (Branding):**
+- [ ] Crear `TenantContext.tsx` con provider y hook `useTenant()`
+- [ ] Implementar detección de subdomain (con fallback para localhost)
+- [ ] Crear endpoint público `GET /api/tenants/by-subdomain/{subdomain}`
+- [ ] Implementar carga de branding al iniciar app
+- [ ] Configurar CSS variables para colores dinámicos (`:root`)
+- [ ] Modificar Login.tsx para mostrar logo dinámico por tenant
+- [ ] Implementar cambio de favicon dinámico
+- [ ] Implementar cambio de título de página dinámico
+- [ ] Crear página `/admin/configuracion/branding` para clientes
+- [ ] Agregar query parameter `?tenant=xxx` para testing local
+- [ ] Probar con 3 tenants diferentes (logos y colores distintos)
 
 **Infraestructura:**
 - [ ] Configurar wildcard DNS `*.chetango.com` en Azure
@@ -1101,9 +1592,23 @@ CAC objetivo = $8,400,000 / 5 = $1,680,000 COP máximo
 - [ ] Contactar 10 academias target para beta
 - [ ] Ofrecer descuento fundadores (50% lifetime)
 - [ ] Onboarding personalizado con cada cliente
+- [ ] **Configurar branding:** Logo + colores para cada cliente beta
+- [ ] **Verificar personalización:** Probar acceso con subdomain de cada cliente
 - [ ] Recopilar feedback en primeras 48 horas
 - [ ] Iterar sobre problemas reportados
 - [ ] Grabar sesiones de uso para análisis
+
+**Checklist por Cliente Nuevo (Usar en cada onboarding):**
+- [ ] 1. Validar subdomain disponible (no duplicado)
+- [ ] 2. Crear registro en tabla Tenants con plan correcto
+- [ ] 3. Solicitar logo del cliente (PNG transparente, 400x100px recomendado)
+- [ ] 4. Subir logo a Azure Storage: `/tenants/{tenantId}/logo.png`
+- [ ] 5. Actualizar columna `LogoUrl` en base de datos
+- [ ] 6. Configurar colores (primario, secundario) o usar defaults
+- [ ] 7. Probar acceso en incógnito: `https://{subdomain}.chetango.com`
+- [ ] 8. Verificar que logo y colores se muestren correctamente
+- [ ] 9. Enviar email de bienvenida con credenciales y link
+- [ ] 10. Agendar call de onboarding (si es plan Profesional/Enterprise)
 
 **Post-Launch:**
 - [ ] Enviar encuesta de satisfacción a clientes beta
@@ -1819,6 +2324,186 @@ az webapp config ssl create `
 
 ---
 
+## 📋 GUÍA RÁPIDA: ONBOARDING DE NUEVO CLIENTE
+
+### Paso a Paso para Agregar una Nueva Academia
+
+#### 1️⃣ **Pre-Registro: Información Requerida**
+
+Solicitar al cliente:
+- ✅ Nombre oficial de la academia
+- ✅ Subdomain deseado (ej: `salsa-cali`, `bachata-bogota`)
+- ✅ Email de contacto principal
+- ✅ Plan elegido (Básico / Profesional / Enterprise)
+- ✅ Logo en PNG transparente (400x100px recomendado) - opcional
+- ✅ Colores corporativos en formato hex - opcional
+
+#### 2️⃣ **Validación y Creación en Base de Datos**
+
+```sql
+-- Verificar que subdomain NO exista
+SELECT COUNT(*) FROM Tenants WHERE Subdomain = 'nuevo-cliente';
+-- Debe retornar 0
+
+-- Crear nuevo tenant
+INSERT INTO Tenants (
+    Id,
+    Nombre,
+    Subdomain,
+    Plan,
+    Estado,
+    FechaRegistro,
+    MaxSedes,
+    MaxAlumnos,
+    MaxProfesores,
+    MaxStorageMB,
+    EmailContacto,
+    ColorPrimario,
+    ColorSecundario,
+    CreadoPor
+) VALUES (
+    NEWID(),
+    'Academia Salsa Caleña',
+    'salsa-cali',
+    'Profesional',
+    'Activo',
+    GETDATE(),
+    2,      -- Plan Profesional: hasta 2 sedes
+    300,    -- Plan Profesional: hasta 300 alumnos
+    15,     -- Plan Profesional: hasta 15 profesores
+    51200,  -- 50 GB en MB
+    'admin@salsacali.com',
+    '#FF5733',  -- Color naranja (o NULL para usar default)
+    '#3498DB',  -- Color azul (o NULL para usar default)
+    'ADMIN'
+);
+```
+
+#### 3️⃣ **Subir Logo a Azure Storage** (si el cliente lo proporciona)
+
+```powershell
+# Obtener TenantId recién creado
+$tenantId = "..." # Del INSERT anterior
+
+# Subir logo a Azure Storage
+az storage blob upload `
+  --account-name chetangostorage `
+  --container-name tenant-logos `
+  --name "$tenantId/logo.png" `
+  --file "C:\path\to\logo-cliente.png" `
+  --content-type "image/png"
+
+# Obtener URL pública
+$logoUrl = az storage blob url `
+  --account-name chetangostorage `
+  --container-name tenant-logos `
+  --name "$tenantId/logo.png" `
+  --output tsv
+```
+
+```sql
+-- Actualizar LogoUrl en base de datos
+UPDATE Tenants 
+SET LogoUrl = 'https://chetangostorage.blob.core.windows.net/tenant-logos/{tenantId}/logo.png'
+WHERE Id = '{tenantId}';
+```
+
+#### 4️⃣ **Crear Usuario Administrador Inicial**
+
+```sql
+-- Crear usuario admin del cliente
+INSERT INTO Usuarios (
+    Id,
+    TenantId,
+    Email,
+    Nombre,
+    Rol,
+    Estado,
+    FechaCreacion
+) VALUES (
+    NEWID(),
+    '{tenantId}',  -- Del paso anterior
+    'admin@salsacali.com',
+    'Administrador',
+    'Admin',
+    'Activo',
+    GETDATE()
+);
+```
+
+#### 5️⃣ **Verificación de Acceso**
+
+**Probar en navegador (modo incógnito):**
+```
+https://salsa-cali.chetango.com
+```
+
+**Verificar que se vea:**
+- ✅ Logo del cliente (si lo proporcionó)
+- ✅ Colores personalizados (si los configuró)
+- ✅ Nombre de la academia en el título
+- ✅ Sin errores en consola del navegador
+
+**Query de verificación:**
+```sql
+SELECT 
+    Subdomain,
+    Nombre,
+    LogoUrl,
+    ColorPrimario,
+    ColorSecundario,
+    Estado,
+    Plan
+FROM Tenants
+WHERE Subdomain = 'salsa-cali';
+```
+
+#### 6️⃣ **Email de Bienvenida**
+
+Enviar email al cliente con:
+- ✅ URL de acceso: `https://{subdomain}.chetango.com`
+- ✅ Credenciales iniciales (si aplica)
+- ✅ Link a documentación de onboarding
+- ✅ Información sobre cómo personalizar branding desde `/admin/configuracion/branding`
+- ✅ Contacto de soporte
+
+#### 7️⃣ **Onboarding Call** (Para Profesional/Enterprise)
+
+Agendar sesión de 30-45 minutos para:
+- ✅ Configurar sedes y horarios
+- ✅ Importar alumnos existentes
+- ✅ Configurar profesores
+- ✅ Crear paquetes de clases
+- ✅ Mostrar sistema de QR para asistencias
+- ✅ Explicar reportes financieros
+
+---
+
+### 🔍 Troubleshooting Común
+
+**Problema:** Logo no se muestra
+- Verificar que `LogoUrl` esté en HTTPS
+- Verificar permisos del blob en Azure Storage (público)
+- Verificar tamaño del archivo (<2MB recomendado)
+- Limpiar caché del navegador
+
+**Problema:** Colores no aplican
+- Verificar formato hex válido (#RRGGBB)
+- Verificar que CSS variables estén definidas
+- Recargar página con Ctrl+F5
+
+**Problema:** Subdomain no resuelve
+- Verificar wildcard DNS `*.chetango.com`
+- Verificar SSL certificate para wildcard
+- Puede tomar 5-10 minutos propagar DNS
+
+**Problema:** Cliente no puede acceder
+- Verificar Estado = 'Activo' en Tenants
+- Verificar que usuario exista con ese TenantId
+- Verificar fecha de vencimiento del plan
+
+---
+
 ## 🎯 RESUMEN EJECUTIVO FINAL
 
 ### Situación Actual
@@ -1843,6 +2528,51 @@ az webapp config ssl create `
 **Semanas 1-2:**
 1. Implementar tabla Tenants y columna TenantId
 2. Configurar filtros globales en Entity Framework
+3. Crear middleware de resolución de tenant
+4. **Implementar sistema de branding dinámico** (TenantContext + CSS variables)
+
+**Semanas 3-4:**
+5. Implementar página de registro y onboarding
+6. Integrar Wompi/Stripe para pagos
+7. **Crear panel de configuración de branding para clientes**
+8. Testing exhaustivo con 3 tenants de prueba (diferentes logos/colores)
+
+**Mes 2:**
+9. Escalar a S0 + B2 ($365K/mes)
+10. Lanzar beta con 5 academias (50% descuento)
+11. **Configurar branding personalizado para cada cliente beta**
+12. Recopilar feedback e iterar
+
+### Punto de Equilibrio
+**2-3 academias** en Plan Profesional cubren costos de infraestructura
+
+### ROI Proyectado
+- **Mes 6:** 11.7x (ingresos 11.7 veces los costos)
+- **Mes 12:** 30.8x
+- **Mes 24:** 35.1x
+
+### 📌 Recordatorio: Personalización por Cliente (Branding)
+
+**Cada vez que se incorpore un nuevo cliente:**
+
+1. ✅ Validar subdomain disponible
+2. ✅ Crear tenant en base de datos
+3. ✅ **Solicitar y subir logo del cliente**
+4. ✅ **Configurar colores corporativos (primario, secundario)**
+5. ✅ Verificar en navegador: `https://{subdomain}.chetango.com`
+6. ✅ Confirmar que logo y colores se vean correctamente
+7. ✅ Enviar credenciales de acceso
+8. ✅ Mostrar al cliente cómo personalizar desde `/admin/configuracion/branding`
+
+**Patrón estándar de la industria usado por:** Shopify, Slack, Zendesk, Notion, HubSpot, Salesforce.
+
+---
+
+**Documento preparado por:** Equipo Técnico Chetango  
+**Última actualización:** 21 de Febrero de 2026 - **Agregada Sección 3.4: Personalización Dinámica (Branding)**  
+**Próxima revisión:** Cada 3 meses o al llegar a 10, 30, 50, 100 clientes
+
+````
 3. Crear middleware de resolución de tenant
 
 **Semanas 3-4:**
