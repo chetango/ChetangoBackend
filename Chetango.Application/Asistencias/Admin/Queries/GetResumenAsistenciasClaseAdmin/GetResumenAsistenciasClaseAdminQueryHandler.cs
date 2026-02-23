@@ -61,7 +61,9 @@ public sealed class GetResumenAsistenciasClaseAdminQueryHandler
             .Include(p => p.TipoPaquete)
             .Include(p => p.Alumno)
                 .ThenInclude(a => a.Usuario)
-            .Where(p => idsAlumnos.Contains(p.IdAlumno) && p.Estado.Nombre == "Activo")
+            .Where(p => idsAlumnos.Contains(p.IdAlumno) 
+                && p.Estado.Nombre == "Activo" 
+                && p.FechaVencimiento >= DateTime.Today) // Excluir paquetes vencidos
             .ToListAsync(cancellationToken);
 
         // Agrupar paquetes por IdPago para identificar paquetes compartidos

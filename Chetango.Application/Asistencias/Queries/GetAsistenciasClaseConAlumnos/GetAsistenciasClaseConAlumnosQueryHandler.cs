@@ -52,7 +52,9 @@ public class GetAsistenciasClaseConAlumnosQueryHandler
             .AsNoTracking()
             .Include(p => p.Estado)
             .Include(p => p.TipoPaquete)
-            .Where(p => idsAlumnos.Contains(p.IdAlumno) && p.Estado.Nombre == "Activo")
+            .Where(p => idsAlumnos.Contains(p.IdAlumno) 
+                && p.Estado.Nombre == "Activo"
+                && p.FechaVencimiento >= DateTime.Today) // Excluir paquetes vencidos
             .ToListAsync(cancellationToken);
 
         var resultado = new List<AsistenciaProfesorDto>();
