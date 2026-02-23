@@ -16,7 +16,8 @@ public record GetUsersQuery(
     int PageSize = 10,
     string? SearchTerm = null,
     string? Rol = null,
-    string? Estado = null
+    string? Estado = null,
+    int? Sede = null
 ) : IRequest<Result<UsuariosPaginadosDTO>>;
 
 public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<UsuariosPaginadosDTO>>
@@ -68,6 +69,12 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<Usuari
                     query = query.Where(u => !u.Profesores.Any() && !u.Alumnos.Any());
                     break;
             }
+        }
+
+        // Filtrar por sede
+        if (request.Sede.HasValue)
+        {
+            query = query.Where(u => (int)u.Sede == request.Sede.Value);
         }
 
         // Contar total

@@ -2609,9 +2609,10 @@ app.MapGet("/api/usuarios", async (
     string? searchTerm = null,
     string? rol = null,
     string? estado = null,
+    int? sede = null,
     IMediator mediator = null!) =>
 {
-    var query = new GetUsersQuery(page, pageSize, searchTerm, rol, estado);
+    var query = new GetUsersQuery(page, pageSize, searchTerm, rol, estado, sede);
     var result = await mediator.Send(query);
     return result.Succeeded 
         ? Results.Ok(result.Value) 
