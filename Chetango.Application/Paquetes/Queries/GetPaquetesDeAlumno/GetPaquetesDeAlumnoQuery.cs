@@ -119,11 +119,10 @@ public class GetPaquetesDeAlumnoQueryHandler : IRequestHandler<GetPaquetesDeAlum
                 p.FechaActivacion,
                 p.FechaVencimiento,
                 p.ValorPaquete,
-                // Lógica de estado: Primero verifica estados explícitos (Vencido, Congelado), 
-                // luego para IdEstado=1 (Activo) verifica si está agotado
+                // Lógica de estado basada en IdEstado de la BD
                 p.IdEstado == 2 ? "Vencido" : 
                 p.IdEstado == 3 ? "Congelado" : 
-                p.IdEstado == 1 && p.ClasesUsadas >= p.ClasesDisponibles ? "Agotado" : 
+                p.IdEstado == 4 ? "Agotado" : 
                 "Activo",
                 p.FechaVencimiento < DateTime.Today,
                 (p.ClasesDisponibles - p.ClasesUsadas) > 0,
