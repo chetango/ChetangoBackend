@@ -118,6 +118,18 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .Include(p => p.Pago)
             .CountAsync(p => p.IdEstado == 4 && p.Pago != null && p.Pago.Sede == Sede.Manizales, cancellationToken);
 
+        // Paquetes agotados (IdEstado == 4 "Agotado")
+        var paquetesAgotados = await _db.Paquetes
+            .CountAsync(p => p.IdEstado == 4, cancellationToken);
+
+        var paquetesAgotadosMedellin = await _db.Paquetes
+            .Include(p => p.Pago)
+            .CountAsync(p => p.IdEstado == 4 && p.Pago != null && p.Pago.Sede == Sede.Medellin, cancellationToken);
+
+        var paquetesAgotadosManizales = await _db.Paquetes
+            .Include(p => p.Pago)
+            .CountAsync(p => p.IdEstado == 4 && p.Pago != null && p.Pago.Sede == Sede.Manizales, cancellationToken);
+
         // Contar asistencias registradas hoy con estado "Presente"
         var asistenciasHoy = await _db.Asistencias
             .Include(a => a.Estado)
