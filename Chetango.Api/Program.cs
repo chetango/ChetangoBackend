@@ -12,6 +12,7 @@ using Chetango.Application.Clases.Commands.CrearClase;
 using Chetango.Application.Clases.Commands.EditarClase;
 using Chetango.Application.Clases.Commands.CancelarClase;
 using Chetango.Application.Clases.Queries.GetClaseById;
+using Chetango.Application.Clases.Queries.GetClases;
 using Chetango.Application.Clases.Queries.GetClasesDeProfesor;
 using Chetango.Application.Clases.Queries.GetTiposClase;
 using Chetango.Application.Clases.Queries.GetProfesores;
@@ -908,6 +909,29 @@ app.MapDelete("/api/clases/{id:guid}", async (
         ? Results.NoContent() 
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOrProfesor");
+
+// GET /api/clases - Listar TODAS las clases con filtros (Admin)
+app.MapGet("/api/clases", async (
+    DateTime? fechaDesde = null,
+    DateTime? fechaHasta = null,
+    Guid? idTipoClase = null,
+    int pageNumber = 1,
+    int pageSize = 100,
+    IMediator mediator = null!) =>
+{
+    var query = new GetClasesQuery(
+        FechaDesde: fechaDesde,
+        FechaHasta: fechaHasta,
+        IdTipoClase: idTipoClase,
+        PageNumber: pageNumber,
+        PageSize: pageSize
+    );
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
 
 // GET /api/clases/{id} - Obtener detalle de una clase (Admin, Profesor dueño o monitor)
 app.MapGet("/api/clases/{id:guid}", async (
