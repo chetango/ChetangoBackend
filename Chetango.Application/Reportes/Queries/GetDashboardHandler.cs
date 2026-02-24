@@ -98,31 +98,25 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .CountAsync(c => c.Fecha >= hoy && c.Fecha <= proximos7Dias, cancellationToken);
 
         var paquetesActivos = await _db.Paquetes
-            .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Activo", cancellationToken);
+            .CountAsync(p => p.IdEstado == 1, cancellationToken);
 
         var paquetesVencidos = await _db.Paquetes
-            .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Vencido", cancellationToken);
+            .CountAsync(p => p.IdEstado == 2, cancellationToken);
 
         var paquetesPorVencer = await _db.Paquetes
-            .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Activo" && p.FechaVencimiento <= proximos7Dias, cancellationToken);
+            .CountAsync(p => p.IdEstado == 1 && p.FechaVencimiento <= proximos7Dias, cancellationToken);
 
         // Paquetes agotados (estado Activo pero sin clases disponibles)
         var paquetesAgotados = await _db.Paquetes
-            .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles, cancellationToken);
+            .CountAsync(p => p.IdEstado == 1 && p.ClasesUsadas >= p.ClasesDisponibles, cancellationToken);
 
         var paquetesAgotadosMedellin = await _db.Paquetes
-            .Include(p => p.Estado)
             .Include(p => p.Pago)
-            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Pago != null && p.Pago.Sede == Sede.Medellin, cancellationToken);
+            .CountAsync(p => p.IdEstado == 1 && p.ClasesUsadas >= p.ClasesDisponibles && p.Pago != null && p.Pago.Sede == Sede.Medellin, cancellationToken);
 
         var paquetesAgotadosManizales = await _db.Paquetes
-            .Include(p => p.Estado)
             .Include(p => p.Pago)
-            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Pago != null && p.Pago.Sede == Sede.Manizales, cancellationToken);
+            .CountAsync(p => p.IdEstado == 1 && p.ClasesUsadas >= p.ClasesDisponibles && p.Pago != null && p.Pago.Sede == Sede.Manizales, cancellationToken);
 
         // Contar asistencias registradas hoy con estado "Presente"
         var asistenciasHoy = await _db.Asistencias
