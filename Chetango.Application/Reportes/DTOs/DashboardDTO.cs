@@ -59,6 +59,9 @@ public class DashboardKPIsDTO
     public int PaquetesActivos { get; set; }
     public int PaquetesVencidos { get; set; }
     public int PaquetesPorVencer { get; set; }
+    public int PaquetesAgotados { get; set; }
+    public int PaquetesAgotadosMedellin { get; set; }
+    public int PaquetesAgotadosManizales { get; set; }
     public int PaquetesVendidos { get; set; }
     public int AsistenciasHoy { get; set; }
     public int AsistenciasMes { get; set; }
