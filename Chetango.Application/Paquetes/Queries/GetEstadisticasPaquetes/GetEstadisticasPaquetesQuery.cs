@@ -30,10 +30,10 @@ public class GetEstadisticasPaquetesQueryHandler : IRequestHandler<GetEstadistic
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        // Agotados son paquetes activos donde todas las clases están usadas
-        var agotados = paquetes.Count(p => p.IdEstado == 1 && p.ClasesUsadas >= p.ClasesDisponibles);
-        // Activos son los que tienen IdEstado == 1 pero aún tienen clases disponibles
-        var activosConClases = paquetes.Count(p => p.IdEstado == 1 && p.ClasesUsadas < p.ClasesDisponibles);
+        // Agotados son paquetes con IdEstado == 4
+        var agotados = paquetes.Count(p => p.IdEstado == 4);
+        // Activos son los que tienen IdEstado == 1
+        var activosConClases = paquetes.Count(p => p.IdEstado == 1);
 
         var estadisticas = new EstadisticasPaquetesDTO(
             TotalPaquetes: paquetes.Count,
