@@ -116,11 +116,13 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
 
         var paquetesAgotadosMedellin = await _db.Paquetes
             .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Sede == Sede.Medellin, cancellationToken);
+            .Include(p => p.Alumno)
+            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Alumno.Sede == Sede.Medellin, cancellationToken);
 
         var paquetesAgotadosManizales = await _db.Paquetes
             .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Sede == Sede.Manizales, cancellationToken);
+            .Include(p => p.Alumno)
+            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Alumno.Sede == Sede.Manizales, cancellationToken);
 
         // Contar asistencias registradas hoy con estado "Presente"
         var asistenciasHoy = await _db.Asistencias
