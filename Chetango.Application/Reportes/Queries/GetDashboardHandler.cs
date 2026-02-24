@@ -109,6 +109,19 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .Include(p => p.Estado)
             .CountAsync(p => p.Estado.Nombre == "Activo" && p.FechaVencimiento <= proximos7Dias, cancellationToken);
 
+        // Paquetes agotados (estado Activo pero sin clases disponibles)
+        var paquetesAgotados = await _db.Paquetes
+            .Include(p => p.Estado)
+            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles, cancellationToken);
+
+        var paquetesAgotadosMedellin = await _db.Paquetes
+            .Include(p => p.Estado)
+            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Sede == Sede.Medellin, cancellationToken);
+
+        var paquetesAgotadosManizales = await _db.Paquetes
+            .Include(p => p.Estado)
+            .CountAsync(p => p.Estado.Nombre == "Activo" && p.ClasesUsadas >= p.ClasesDisponibles && p.Sede == Sede.Manizales, cancellationToken);
+
         // Contar asistencias registradas hoy con estado "Presente"
         var asistenciasHoy = await _db.Asistencias
             .Include(a => a.Estado)
@@ -203,6 +216,9 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             PaquetesActivos = paquetesActivos,
             PaquetesVencidos = paquetesVencidos,
             PaquetesPorVencer = paquetesPorVencer,
+            PaquetesAgotados = paquetesAgotados,
+            PaquetesAgotadosMedellin = paquetesAgotadosMedellin,
+            PaquetesAgotadosManizales = paquetesAgotadosManizales,
             PaquetesVendidos = paquetesVendidos,
             AsistenciasHoy = asistenciasHoy,
             AsistenciasMes = asistenciasMes,
