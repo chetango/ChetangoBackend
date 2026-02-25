@@ -6,6 +6,7 @@ using Microsoft.Identity.Web;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
+using Chetango.Domain.Enums;
 using Chetango.Application.Clases.Queries.GetClasesDeAlumno;
 using Chetango.Application.Clases.Commands;
 using Chetango.Application.Clases.Commands.CrearClase;
@@ -50,6 +51,9 @@ using Chetango.Application.Asistencias.Admin.Queries.GetResumenAsistenciasClaseA
 using Chetango.Application.Pagos.Commands;
 using Chetango.Application.Pagos.Queries;
 using Chetango.Application.Pagos.DTOs;
+using Chetango.Application.Finanzas.Commands;
+using Chetango.Application.Finanzas.Queries;
+using Chetango.Application.Finanzas.DTOs;
 using Chetango.Application.Reportes.Queries;
 using Chetango.Application.Reportes.DTOs;
 using Chetango.Application.Reportes.Services;
@@ -1461,6 +1465,166 @@ app.MapDelete("/api/pagos/{id:guid}", async (
     var result = await mediator.Send(command);
     return result.Succeeded 
         ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ENDPOINTS DE FINANZAS - Gestión de otros ingresos y gastos
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// GET /api/finanzas/otros-ingresos - Listar otros ingresos con filtros (AdminOnly)
+app.MapGet("/api/finanzas/otros-ingresos", async (
+    IMediator mediator,
+    DateTime? fechaDesde = null,
+    DateTime? fechaHasta = null,
+    Sede? sede = null,
+    Guid? idCategoriaIngreso = null) =>
+{
+    var query = new GetOtrosIngresosQuery(fechaDesde, fechaHasta, sede, idCategoriaIngreso);
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/finanzas/otros-ingresos - Crear otro ingreso (AdminOnly)
+app.MapPost("/api/finanzas/otros-ingresos", async (
+    CrearOtroIngresoDTO dto,
+    ClaimsPrincipal user,
+    IMediator mediator) =>
+{
+    var email = user.FindFirst(ClaimTypes.Email)?.Value
+        ?? user.FindFirst("preferred_username")?.Value
+        ?? user.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Unauthorized();
+
+    var command = new CrearOtroIngresoCommand(
+        dto.Concepto,
+        dto.Monto,
+        dto.Fecha,
+        dto.Sede,
+        dto.IdCategoriaIngreso,
+        dto.Descripcion,
+        dto.UrlComprobante,
+        email
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// DELETE /api/finanzas/otros-ingresos/{id} - Eliminar otro ingreso (soft delete) (AdminOnly)
+app.MapDelete("/api/finanzas/otros-ingresos/{id:guid}", async (
+    Guid id,
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var command = new EliminarOtroIngresoCommand(id, emailClaim);
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/finanzas/otros-gastos - Listar otros gastos con filtros (AdminOnly)
+app.MapGet("/api/finanzas/otros-gastos", async (
+    IMediator mediator,
+    DateTime? fechaDesde = null,
+    DateTime? fechaHasta = null,
+    Sede? sede = null,
+    Guid? idCategoriaGasto = null) =>
+{
+    var query = new GetOtrosGastosQuery(fechaDesde, fechaHasta, sede, idCategoriaGasto);
+
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/finanzas/otros-gastos - Crear otro gasto (AdminOnly)
+app.MapPost("/api/finanzas/otros-gastos", async (
+    CrearOtroGastoDTO dto,
+    ClaimsPrincipal user,
+    IMediator mediator) =>
+{
+    var email = user.FindFirst(ClaimTypes.Email)?.Value
+        ?? user.FindFirst("preferred_username")?.Value
+        ?? user.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Unauthorized();
+
+    var command = new CrearOtroGastoCommand(
+        dto.Concepto,
+        dto.Monto,
+        dto.Fecha,
+        dto.Sede,
+        dto.IdCategoriaGasto,
+        dto.Proveedor,
+        dto.Descripcion,
+        dto.UrlFactura,
+        dto.NumeroFactura,
+        email
+    );
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// DELETE /api/finanzas/otros-gastos/{id} - Eliminar otro gasto (soft delete) (AdminOnly)
+app.MapDelete("/api/finanzas/otros-gastos/{id:guid}", async (
+    Guid id,
+    HttpContext httpContext,
+    IMediator mediator) =>
+{
+    var emailClaim = httpContext.User.FindFirstValue(ClaimTypes.Email)
+        ?? httpContext.User.FindFirst("preferred_username")?.Value
+        ?? httpContext.User.FindFirst("upn")?.Value;
+
+    if (string.IsNullOrWhiteSpace(emailClaim))
+        return Results.Unauthorized();
+
+    var command = new EliminarOtroGastoCommand(id, emailClaim);
+
+    var result = await mediator.Send(command);
+    return result.Succeeded 
+        ? Results.NoContent() 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/finanzas/categorias-ingreso - Listar categorías de ingresos (AdminOnly)
+app.MapGet("/api/finanzas/categorias-ingreso", async (IMediator mediator) =>
+{
+    var query = new GetCategoriasIngresoQuery();
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/finanzas/categorias-gasto - Listar categorías de gastos (AdminOnly)
+app.MapGet("/api/finanzas/categorias-gasto", async (IMediator mediator) =>
+{
+    var query = new GetCategoriasGastoQuery();
+    var result = await mediator.Send(query);
+    return result.Succeeded 
+        ? Results.Ok(result.Value) 
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
