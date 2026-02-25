@@ -35,6 +35,8 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<SolicitudClasePrivada> SolicitudesClasePrivada => Set<SolicitudClasePrivada>();
         public DbSet<CodigoReferido> CodigosReferido => Set<CodigoReferido>();
         public DbSet<UsoCodigoReferido> UsosCodigoReferido => Set<UsoCodigoReferido>();
+        public DbSet<OtroIngreso> OtrosIngresos => Set<OtroIngreso>();
+        public DbSet<OtroGasto> OtrosGastos => Set<OtroGasto>();
 
         // Estados y tipos
         public DbSet<EstadoAlumno> EstadosAlumno => Set<EstadoAlumno>();
@@ -50,6 +52,8 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<TipoAsistencia> TiposAsistencia => Set<TipoAsistencia>();
         public DbSet<RolEnClase> RolesEnClase => Set<RolEnClase>();
         public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
+        public DbSet<CategoriaIngreso> CategoriasIngreso => Set<CategoriaIngreso>();
+        public DbSet<CategoriaGasto> CategoriasGasto => Set<CategoriaGasto>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

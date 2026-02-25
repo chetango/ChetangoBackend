@@ -24,6 +24,8 @@ namespace Chetango.Application.Common
         DbSet<SolicitudClasePrivada> SolicitudesClasePrivada { get; }
         DbSet<CodigoReferido> CodigosReferido { get; }
         DbSet<UsoCodigoReferido> UsosCodigoReferido { get; }
+        DbSet<OtroIngreso> OtrosIngresos { get; }
+        DbSet<OtroGasto> OtrosGastos { get; }
         
         // Método genérico para acceder a otros DbSets sin exponerlos explícitamente
         DbSet<TEntity> Set<TEntity>() where TEntity : class;

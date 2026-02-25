@@ -82,17 +82,32 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
                 .ThenInclude(u => u.Estado)
             .CountAsync(a => a.Usuario.Estado.Nombre == "Activo", cancellationToken);
 
-        var ingresosEsteMes = await _db.Pagos
+        // Calcular ingresos de alumnos (pagos)
+        var ingresosAlumnosEsteMes = await _db.Pagos
             .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes)
             .SumAsync(p => p.MontoTotal, cancellationToken);
 
+        // Calcular otros ingresos
+        var otrosIngresosEsteMes = await _db.OtrosIngresos
+            .Where(i => i.Fecha >= primerDiaMes && i.Fecha <= ultimoDiaMes)
+            .SumAsync(i => i.Monto, cancellationToken);
+
+        // Total de ingresos
+        var ingresosEsteMes = ingresosAlumnosEsteMes + otrosIngresosEsteMes;
+
         var ingresosMedellinEsteMes = await _db.Pagos
             .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes && p.Sede == Sede.Medellin)
-            .SumAsync(p => p.MontoTotal, cancellationToken);
+            .SumAsync(p => p.MontoTotal, cancellationToken)
+            + await _db.OtrosIngresos
+            .Where(i => i.Fecha >= primerDiaMes && i.Fecha <= ultimoDiaMes && i.Sede == Sede.Medellin)
+            .SumAsync(i => i.Monto, cancellationToken);
 
         var ingresosManizalesEsteMes = await _db.Pagos
             .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes && p.Sede == Sede.Manizales)
-            .SumAsync(p => p.MontoTotal, cancellationToken);
+            .SumAsync(p => p.MontoTotal, cancellationToken)
+            + await _db.OtrosIngresos
+            .Where(i => i.Fecha >= primerDiaMes && i.Fecha <= ultimoDiaMes && i.Sede == Sede.Manizales)
+            .SumAsync(i => i.Monto, cancellationToken);
 
         var clasesProximos7Dias = await _db.Clases
             .CountAsync(c => c.Fecha >= hoy && c.Fecha <= proximos7Dias, cancellationToken);
@@ -172,18 +187,30 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             ? ((paquetesVendidos - paquetesVendidosPeriodoAnterior) / (decimal)paquetesVendidosPeriodoAnterior) * 100 
             : null;
 
-        // Calcular egresos del mes (pagos a profesores)
-        var egresosEsteMes = await _db.LiquidacionesMensuales
+        // Calcular egresos del mes (pagos a profesores + otros gastos)
+        var egresosNominaEsteMes = await _db.LiquidacionesMensuales
             .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes)
             .SumAsync(l => l.TotalPagar, cancellationToken);
 
+        var otrosGastosEsteMes = await _db.OtrosGastos
+            .Where(g => g.Fecha >= primerDiaMes && g.Fecha <= ultimoDiaMes)
+            .SumAsync(g => g.Monto, cancellationToken);
+
+        var egresosEsteMes = egresosNominaEsteMes + otrosGastosEsteMes;
+
         var egresosMedellinEsteMes = await _db.LiquidacionesMensuales
             .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes && l.Sede == Sede.Medellin)
-            .SumAsync(l => l.TotalPagar, cancellationToken);
+            .SumAsync(l => l.TotalPagar, cancellationToken)
+            + await _db.OtrosGastos
+            .Where(g => g.Fecha >= primerDiaMes && g.Fecha <= ultimoDiaMes && g.Sede == Sede.Medellin)
+            .SumAsync(g => g.Monto, cancellationToken);
 
         var egresosManizalesEsteMes = await _db.LiquidacionesMensuales
             .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes && l.Sede == Sede.Manizales)
-            .SumAsync(l => l.TotalPagar, cancellationToken);
+            .SumAsync(l => l.TotalPagar, cancellationToken)
+            + await _db.OtrosGastos
+            .Where(g => g.Fecha >= primerDiaMes && g.Fecha <= ultimoDiaMes && g.Sede == Sede.Manizales)
+            .SumAsync(g => g.Monto, cancellationToken);
 
         var egresosPeriodoAnterior = await _db.LiquidacionesMensuales
             .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaPeriodoAnterior && l.FechaPago <= ultimoDiaPeriodoAnterior)
@@ -206,6 +233,8 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
         {
             TotalAlumnosActivos = totalAlumnosActivos,
             IngresosEsteMes = ingresosEsteMes,
+            IngresosAlumnosEsteMes = ingresosAlumnosEsteMes,
+            OtrosIngresosEsteMes = otrosIngresosEsteMes,
             IngresosMedellinEsteMes = ingresosMedellinEsteMes,
             IngresosManizalesEsteMes = ingresosManizalesEsteMes,
             ClasesProximos7Dias = clasesProximos7Dias,
@@ -219,6 +248,8 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             AsistenciasHoy = asistenciasHoy,
             AsistenciasMes = asistenciasMes,
             EgresosEsteMes = egresosEsteMes,
+            EgresosNominaEsteMes = egresosNominaEsteMes,
+            OtrosGastosEsteMes = otrosGastosEsteMes,
             EgresosMedellinEsteMes = egresosMedellinEsteMes,
             EgresosManizalesEsteMes = egresosManizalesEsteMes,
             GananciaNeta = gananciaNeta,

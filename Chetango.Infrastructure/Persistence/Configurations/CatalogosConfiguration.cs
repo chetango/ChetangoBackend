@@ -149,3 +149,47 @@ public class EstadoNotificacionConfiguration : IEntityTypeConfiguration<EstadoNo
         );
     }
 }
+
+public class CategoriaIngresoConfiguration : IEntityTypeConfiguration<CategoriaIngreso>
+{
+    public void Configure(EntityTypeBuilder<CategoriaIngreso> builder)
+    {
+        builder.ToTable("CategoriasIngreso");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Nombre).IsRequired().HasMaxLength(100);
+        builder.Property(c => c.Descripcion).HasMaxLength(500);
+        builder.HasIndex(c => c.Nombre).IsUnique();
+        builder.HasData(
+            new CategoriaIngreso { Id = Guid.Parse("e1111111-0000-0000-0000-000000000001"), Nombre = "Eventos", Descripcion = "Ingresos por eventos especiales, shows, presentaciones" },
+            new CategoriaIngreso { Id = Guid.Parse("e1111111-0000-0000-0000-000000000002"), Nombre = "Alquiler de Espacio", Descripcion = "Ingresos por alquiler del salón para eventos externos" },
+            new CategoriaIngreso { Id = Guid.Parse("e1111111-0000-0000-0000-000000000003"), Nombre = "Mercancía", Descripcion = "Venta de camisetas, zapatos, accesorios de danza" },
+            new CategoriaIngreso { Id = Guid.Parse("e1111111-0000-0000-0000-000000000004"), Nombre = "Shows Privados", Descripcion = "Presentaciones privadas contratadas" },
+            new CategoriaIngreso { Id = Guid.Parse("e1111111-0000-0000-0000-000000000005"), Nombre = "Talleres Externos", Descripcion = "Talleres impartidos fuera de la academia" },
+            new CategoriaIngreso { Id = Guid.Parse("e1111111-0000-0000-0000-000000000006"), Nombre = "Patrocinios", Descripcion = "Ingresos por patrocinios de marcas o empresas" },
+            new CategoriaIngreso { Id = Guid.Parse("e1111111-0000-0000-0000-000000000007"), Nombre = "Otros", Descripcion = "Otros ingresos no clasificados" }
+        );
+    }
+}
+
+public class CategoriaGastoConfiguration : IEntityTypeConfiguration<CategoriaGasto>
+{
+    public void Configure(EntityTypeBuilder<CategoriaGasto> builder)
+    {
+        builder.ToTable("CategoriasGasto");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Nombre).IsRequired().HasMaxLength(100);
+        builder.Property(c => c.Descripcion).HasMaxLength(500);
+        builder.HasIndex(c => c.Nombre).IsUnique();
+        builder.HasData(
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000001"), Nombre = "Arriendo", Descripcion = "Pago mensual del local o salón" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000002"), Nombre = "Servicios Públicos", Descripcion = "Luz, agua, internet, teléfono" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000003"), Nombre = "Mantenimiento", Descripcion = "Reparaciones, mantenimiento de equipos e instalaciones" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000004"), Nombre = "Marketing", Descripcion = "Publicidad, redes sociales, diseño gráfico" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000005"), Nombre = "Suministros", Descripcion = "Material de oficina, limpieza, consumibles" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000006"), Nombre = "Equipamiento", Descripcion = "Espejos, barras, sonido, iluminación" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000007"), Nombre = "Impuestos y Seguros", Descripcion = "Impuestos, seguros, trámites legales" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000008"), Nombre = "Transporte", Descripcion = "Transporte de profesores o materiales" },
+            new CategoriaGasto { Id = Guid.Parse("f1111111-0000-0000-0000-000000000009"), Nombre = "Otros", Descripcion = "Otros gastos no clasificados" }
+        );
+    }
+}
