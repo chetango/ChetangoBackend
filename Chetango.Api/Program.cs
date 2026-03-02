@@ -3210,6 +3210,4 @@ app.MapGet("/api/nomina/clases-profesor/{idProfesor:guid}", async (
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
-#endregion
-
 app.Run();
