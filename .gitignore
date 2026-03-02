@@ -118,6 +118,9 @@ scripts/.local.*
 ## Local scratch files
 create.sql
 
+## Personal/Interview preparation files (not for public repo)
+GUIA-ENTREVISTAS-BACKEND.md
+
 ## Uploaded files
 **/wwwroot/uploads/
 

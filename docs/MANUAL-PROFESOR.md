@@ -4,6 +4,7 @@
 
 > **Versión:** 1.0  
 > **Fecha:** Febrero 2026  
+> **Autor:** Jorge Padilla - Corporación Chetango  
 > **Audiencia:** Profesores de Corporación Chetango
 
 ---

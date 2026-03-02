@@ -4,6 +4,7 @@
 
 > **Versión:** 2.0  
 > **Fecha:** Febrero 2026  
+> **Autor:** Jorge Padilla - Corporación Chetango  
 > **Actualizado:** Sistema Multi-Sede (Medellín y Manizales)  
 > **Audiencia:** Administradores del Sistema Chetango
 

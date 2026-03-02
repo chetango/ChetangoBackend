@@ -1,6 +1,12 @@
+// Aphellion (Chetango) - Backend API
+// Author: Jorge Padilla
+// Company: Corporación Chetango
+// Description: Main application entry point with Clean Architecture + CQRS
+
 using Microsoft.EntityFrameworkCore;
 using Chetango.Infrastructure.Persistence;
 using Chetango.Infrastructure.Services;
+using Chetango.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using System.Security.Claims;
@@ -82,6 +88,9 @@ using Chetango.Application.Referidos.DTOs;
 using Chetango.Application.Admin.Queries;
 using Chetango.Application.Admin.Commands;
 using Chetango.Application.Admin.DTOs;
+using Chetango.Application.Suscripciones.Queries;
+using Chetango.Application.Suscripciones.Commands;
+using Chetango.Application.Suscripciones.DTOs;
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
@@ -103,6 +112,10 @@ builder.Services.AddDbContext<ChetangoDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ChetangoConnection")));
 // Mapear interfaz de Application al DbContext concreto
 builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<ChetangoDbContext>());
+
+// Registrar servicios de Multi-Tenancy
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantService, TenantService>();
 
 // Registrar servicio de WhatsApp
 builder.Services.AddScoped<IWhatsAppService, TwilioWhatsAppService>();
@@ -3205,4 +3218,248 @@ app.MapGet("/api/nomina/clases-profesor/{idProfesor:guid}", async (
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
+#region Suscripciones
+
+// GET /api/suscripciones/mi-estado - Obtener estado de suscripción del tenant actual (Admin)
+app.MapGet("/api/suscripciones/mi-estado", async (
+    ClaimsPrincipal user,
+    IAppDbContext db,
+    IMediator mediator,
+    ITenantService tenantService) =>
+{
+    // Obtener TenantId del usuario autenticado usando el servicio
+    var tenantId = tenantService.GetCurrentTenantId();
+    
+    if (!tenantId.HasValue)
+        return Results.BadRequest(new { error = "No se pudo determinar el tenant del usuario" });
+
+    var query = new GetEstadoSuscripcionQuery(tenantId.Value);
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/suscripciones/configuracion-pago - Obtener datos bancarios (Admin)
+app.MapGet("/api/suscripciones/configuracion-pago", async (
+    IMediator mediator) =>
+{
+    var query = new GetConfiguracionPagoQuery();
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/suscripciones/historial - Obtener historial de pagos (Admin)
+app.MapGet("/api/suscripciones/historial", async (
+    ClaimsPrincipal user,
+    IMediator mediator,
+    ITenantService tenantService) =>
+{
+    // Obtener TenantId del usuario autenticado usando el servicio
+    var tenantId = tenantService.GetCurrentTenantId();
+    
+    if (!tenantId.HasValue)
+        return Results.BadRequest(new { error = "No se pudo determinar el tenant del usuario" });
+
+    var query = new GetHistorialPagosQuery(tenantId.Value);
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/suscripciones/comprobante - Subir comprobante de pago (Admin)
+app.MapPost("/api/suscripciones/comprobante", async (
+    HttpRequest request,
+    ClaimsPrincipal user,
+    IMediator mediator,
+    IWebHostEnvironment env,
+    ITenantService tenantService) =>
+{
+    // Obtener TenantId del usuario autenticado usando el servicio
+    var tenantId = tenantService.GetCurrentTenantId();
+    
+    if (!tenantId.HasValue)
+        return Results.BadRequest(new { error = "No se pudo determinar el tenant del usuario" });
+
+    // Obtener email del usuario para auditoría
+    var email = user.FindFirst(ClaimTypes.Email)?.Value 
+             ?? user.FindFirst("preferred_username")?.Value 
+             ?? user.FindFirst("email")?.Value;
+
+    if (string.IsNullOrEmpty(email))
+        return Results.Unauthorized();
+
+    // Leer form data
+    var form = await request.ReadFormAsync();
+    var archivo = form.Files.GetFile("archivo");
+    
+    if (archivo == null || archivo.Length == 0)
+        return Results.BadRequest(new { error = "Debe proporcionar un archivo" });
+
+    // Validar extensión
+    var extensionesPermitidas = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+    var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+    
+    if (!extensionesPermitidas.Contains(extension))
+        return Results.BadRequest(new { error = "Solo se permiten archivos PDF, JPG o PNG" });
+
+    // Validar tamaño (5 MB)
+    if (archivo.Length > 5_242_880)
+        return Results.BadRequest(new { error = "El archivo no debe superar 5 MB" });
+
+    // Leer otros campos del form
+    if (!decimal.TryParse(form["monto"], out var monto))
+        return Results.BadRequest(new { error = "Monto inválido" });
+    
+    var referencia = form["referencia"].ToString();
+    if (string.IsNullOrWhiteSpace(referencia))
+        return Results.BadRequest(new { error = "La referencia es obligatoria" });
+    
+    var metodoPago = form["metodoPago"].ToString();
+    if (string.IsNullOrWhiteSpace(metodoPago))
+        metodoPago = "Transferencia Bancaria";
+
+    // Guardar archivo en el servidor
+    var uploadsPath = Path.Combine(env.WebRootPath, "uploads", "suscripciones");
+    Directory.CreateDirectory(uploadsPath);
+
+    // Generar nombre único
+    var fileName = $"{Guid.NewGuid()}{extension}";
+    var filePath = Path.Combine(uploadsPath, fileName);
+
+    // Guardar archivo
+    using (var stream = new FileStream(filePath, FileMode.Create))
+    {
+        await archivo.CopyToAsync(stream);
+    }
+
+    // URL relativa del comprobante
+    var comprobanteUrl = $"/uploads/suscripciones/{fileName}";
+
+    var command = new CrearPagoSuscripcionCommand(
+        tenantId.Value,
+        DateTime.UtcNow,
+        monto,
+        referencia,
+        metodoPago,
+        comprobanteUrl,
+        archivo.FileName,
+        (int)archivo.Length,
+        email
+    );
+
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded 
+        ? Results.Ok(new { success = true, pagoId = result.Value, message = "Comprobante recibido. Lo revisaremos en máximo 2 horas." })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly")
+  .DisableAntiforgery(); // Necesario para subir archivos
+
+// GET /api/suscripciones/admin/historial - Obtener historial de pagos con filtros (SuperAdmin)
+app.MapGet("/api/suscripciones/admin/historial", async (
+    [FromQuery] DateTime? fechaDesde,
+    [FromQuery] DateTime? fechaHasta,
+    [FromQuery] string? estado,
+    ClaimsPrincipal user,
+    IMediator mediator) =>
+{
+    // Verificar que el usuario tiene rol SuperAdmin
+    if (!user.IsInRole("SuperAdmin"))
+        return Results.Forbid();
+
+    var query = new GetHistorialPagosAdminQuery(fechaDesde, fechaHasta, estado);
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/suscripciones/admin/pendientes - Obtener pagos pendientes (SuperAdmin)
+app.MapGet("/api/suscripciones/admin/pendientes", async (
+    ClaimsPrincipal user,
+    IMediator mediator) =>
+{
+    // Verificar que el usuario tiene rol SuperAdmin
+    if (!user.IsInRole("SuperAdmin"))
+        return Results.Forbid();
+
+    var query = new GetPagosPendientesAprobacionQuery();
+    var result = await mediator.Send(query);
+    
+    return result.Succeeded 
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly"); // SuperAdmin también tiene Admin, se verifica dentro
+
+// POST /api/suscripciones/admin/aprobar/{pagoId} - Aprobar pago (SuperAdmin)
+app.MapPost("/api/suscripciones/admin/aprobar/{pagoId:guid}", async (
+    Guid pagoId,
+    ClaimsPrincipal user,
+    IMediator mediator) =>
+{
+    // Verificar que el usuario tiene rol SuperAdmin
+    if (!user.IsInRole("SuperAdmin"))
+        return Results.Forbid();
+
+    var email = user.FindFirst(ClaimTypes.Email)?.Value 
+             ?? user.FindFirst("preferred_username")?.Value 
+             ?? user.FindFirst("email")?.Value;
+
+    var command = new AprobarPagoSuscripcionCommand(
+        pagoId,
+        email ?? "Sistema",
+        null
+    );
+
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded 
+        ? Results.Ok(new { success = true, message = "Pago aprobado y suscripción extendida exitosamente" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/suscripciones/admin/rechazar/{pagoId} - Rechazar pago (SuperAdmin)
+app.MapPost("/api/suscripciones/admin/rechazar/{pagoId:guid}", async (
+    Guid pagoId,
+    [FromBody] RechazarPagoRequest request,
+    ClaimsPrincipal user,
+    IMediator mediator) =>
+{
+    // Verificar que el usuario tiene rol SuperAdmin
+    if (!user.IsInRole("SuperAdmin"))
+        return Results.Forbid();
+
+    if (string.IsNullOrWhiteSpace(request.MotivoRechazo))
+        return Results.BadRequest(new { error = "Debe proporcionar un motivo de rechazo" });
+
+    var email = user.FindFirst(ClaimTypes.Email)?.Value 
+             ?? user.FindFirst("preferred_username")?.Value 
+             ?? user.FindFirst("email")?.Value;
+
+    var command = new RechazarPagoSuscripcionCommand(
+        pagoId,
+        email ?? "Sistema",
+        request.MotivoRechazo
+    );
+
+    var result = await mediator.Send(command);
+    
+    return result.Succeeded 
+        ? Results.Ok(new { success = true, message = "Pago rechazado" })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+#endregion
+
 app.Run();
+
+// Request DTOs para endpoints
+record RechazarPagoRequest(string MotivoRechazo);
