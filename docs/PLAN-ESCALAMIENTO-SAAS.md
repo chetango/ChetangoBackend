@@ -1,9 +1,36 @@
 # 📊 PLAN DE ESCALAMIENTO CHETANGO SAAS
 
-**Versión:** 1.1  
-**Fecha:** 21 de Febrero de 2026  
+**Versión:** 1.2  
+**Fecha:** 27 de Febrero de 2026  
+**Última Actualización:** Migración a dominio aphellion.com completada  
 **Autor:** Equipo Técnico Chetango  
 **Propósito:** Guía de infraestructura, costos y escalamiento para convertir Chetango en plataforma SaaS multi-tenant
+
+---
+
+## 🎯 ESTADO ACTUAL DEL PROYECTO
+
+### ✅ FASE 0 COMPLETADA - Migración a Dominio Neutral (27 Feb 2026)
+
+**Objetivo:** Preparar infraestructura para multi-tenancy con dominio neutral
+
+**Logros:**
+- ✅ Dominio **aphellion.com** adquirido (Namecheap, $11.48 USD/año)
+- ✅ DNS configurado en Azure DNS Zone con nameservers activos
+- ✅ Frontend migrado a: **corporacionchetango.aphellion.com**
+- ✅ Backend migrado a: **api.aphellion.com**
+- ✅ SSL gratuito configurado en ambos dominios (SNI SSL)
+- ✅ CORS configurado en Azure App Service
+- ✅ Azure AD redirect URIs actualizados
+- ✅ GitHub Actions Variables configuradas
+- ✅ Login y API funcionales en nuevo dominio
+- ✅ Wildcard DNS (*.aphellion.com) configurado para futuros clientes
+
+**Dominios activos:**
+- 🔵 **Producción actual:** corporacionchetango.aphellion.com (frontend) + api.aphellion.com (backend)
+- 🟢 **Dominio legacy:** app.corporacionchetango.com (mantener 30 días, luego deprecar)
+
+**Próximo paso:** FASE 1 - Implementar multi-tenancy en código (TenantId en tablas)
 
 ---
 
@@ -16,6 +43,7 @@
    - 3.2 Componentes Clave
    - 3.3 Flujo de Autenticación
    - **3.4 Personalización Dinámica (Branding)** ⭐ NUEVO
+   - **3.5 Arquitectura de Roles y Permisos** ⭐ NUEVO
 4. [Plan de Escalamiento por Etapas](#4-plan-de-escalamiento-por-etapas)
 5. [Especificaciones Técnicas por Fase](#5-especificaciones-técnicas-por-fase)
 6. [Análisis de Costos y Rentabilidad](#6-análisis-de-costos-y-rentabilidad)
@@ -23,7 +51,7 @@
 8. [Métricas de Monitoreo](#8-métricas-de-monitoreo)
 9. [Plan de Contingencia](#9-plan-de-contingencia)
 10. [Anexos Técnicos](#10-anexos-técnicos)
-11. **[Guía Rápida: Onboarding de Nuevo Cliente](#guía-rápida-onboarding-de-nuevo-cliente)** ⭐ NUEVO
+11. **[✨ GUÍA RÁPIDA: Agregar Nuevo Cliente/Academia](#guía-rápida-agregar-nuevo-cliente)** ⭐ ESENCIAL
 
 ---
 
@@ -38,13 +66,21 @@
 - ✅ Frontend en React + TypeScript
 - ✅ Backend en .NET 9.0 con Clean Architecture
 - ✅ Base de datos en Azure SQL Database
+- ✅ **Dominio neutral aphellion.com configurado** 🆕
+- ✅ **Wildcard DNS para subdominio por cliente** 🆕
 
 **Uso Actual:**
-- **Cliente único:** Corporación Chetango (uso interno)
-- **Usuarios totales:** ~300 (alumnos + profesores + administrativos)
+- **Cliente único:** Corporación Chetango (primer cliente en modelo SaaS)
+- **Subdomain:** corporacionchetango.aphellion.com
+- **Usuarios totales:** ~50 usuarios creados (sin credenciales aún)
 - **Sedes:** 2 (Medellín y Manizales)
 - **Clases activas:** ~40-50 clases/semana
 - **Transacciones mensuales:** ~600-800 pagos/mes
+
+**URLs Productivas:**
+- 🌐 **Frontend:** https://corporacionchetango.aphellion.com
+- 🔌 **API:** https://api.aphellion.com
+- 🔐 **Auth:** Microsoft Entra ID (Client ID: d35c1d4d-9ddc-4a8b-bb89-1964b37ff573)
 
 ### 1.2 Infraestructura Azure Actual
 
@@ -64,18 +100,18 @@
 ### 1.3 Limitaciones Identificadas
 
 **Técnicas:**
-- ❌ No existe sistema de multi-tenancy (TenantId)
-- ❌ No hay proceso de registro self-service
-- ❌ No hay integración de pagos automáticos (Stripe/Wompi)
-- ❌ No hay gestión de suscripciones
-- ❌ Subdominios no configurados (*.chetango.com)
-- ❌ Auto-scaling no disponible (tier Basic)
+- ❌ No existe sistema de multi-tenancy (TenantId) - **FASE 1 pendiente**
+- ❌ No hay proceso de registro self-service - **FASE 2 pendiente**
+- ❌ No hay integración de pagos automáticos (Stripe/Wompi) - **FASE 2 pendiente**
+- ❌ No hay gestión de suscripciones - **FASE 2 pendiente**
+- ✅ ~~Subdominios no configurados~~ - **COMPLETADO (wildcard *.aphellion.com)**
+- ❌ Auto-scaling no disponible (tier Basic) - **FASE 3 pendiente**
 
 **Operacionales:**
-- ❌ Onboarding manual (no escalable)
-- ❌ Sin métricas de uso por cliente
-- ❌ Sin monitoreo proactivo (Application Insights)
-- ❌ Backups limitados (7 días)
+- ⚠️ Onboarding manual (no escalable) - **Proceso documentado, automatización en FASE 2**
+- ❌ Sin métricas de uso por cliente - **FASE 2 pendiente**
+- ❌ Sin monitoreo proactivo (Application Insights) - **FASE 3 pendiente**
+- ⚠️ Backups limitados (7 días) - **Suficiente para fase actual, mejorar en FASE 3**
 
 ---
 
@@ -224,6 +260,17 @@ CREATE TABLE Tenants (
 - LiquidacionesMensuales
 - Solicitudes
 - Referidos
+- TiposClase (cada academia define sus propios tipos: Tango, Salsa, Ballet, etc.)
+
+**Tablas que NO necesitan TenantId (Catálogos Nacionales):**
+- TiposDocumento (CC, CE, TI, Pasaporte - estándares nacionales)
+- Ciudades (Bogotá, Medellín, Cali - compartidas)
+- Paises (Colombia, Venezuela - compartidos)
+- Estados (Activo, Inactivo - estados genéricos del sistema)
+
+**Regla práctica:**
+- ✅ **Datos transaccionales/específicos del negocio** → SÍ necesitan TenantId
+- ❌ **Catálogos nacionales/legales/compartidos** → NO necesitan TenantId
 
 **Ejemplo de migración:**
 
@@ -842,6 +889,125 @@ https://nuevo-cliente.chetango.com
 → Debe cargar con logo y colores del cliente
 → Sin errores en consola
 ```
+
+---
+
+### 3.5 Arquitectura de Roles y Permisos
+
+#### **SuperAdmin: El Gestor de la Plataforma SaaS**
+
+En un sistema multi-tenant, necesitas **distinguir** entre:
+- **SuperAdmin**: Dueño de la plataforma que gestiona TODAS las academias
+- **Admin**: Administrador de UNA academia específica
+
+**¿Por qué es importante?**
+- Sin SuperAdmin: Tu usuario actual tendría TenantId → Solo vería su propia academia
+- Con SuperAdmin: Usuario especial sin TenantId → Ve y gestiona TODAS las academias
+
+#### **Comparación de Roles:**
+
+| Característica | SuperAdmin | Admin | Profesor | Alumno |
+|----------------|------------|-------|----------|--------|
+| **TenantId** | `NULL` | GUID | GUID | GUID |
+| **Acceso a datos** | Todas las academias | Solo su academia | Solo su academia | Solo sus datos |
+| **Gestión de suscripciones** | ✅ Todas | ✅ Solo la suya | ❌ | ❌ |
+| **Aprueba pagos de academias** | ✅ | ❌ | ❌ | ❌ |
+| **Crea nuevas academias** | ✅ | ❌ | ❌ | ❌ |
+| **Ve reportes globales** | ✅ | ❌ | ❌ | ❌ |
+| **Gestiona alumnos/profesores** | ✅ Todas | ✅ Solo su academia | ✅ Solo sus clases | ❌ |
+
+#### **Configuración en Azure AD:**
+
+**1. Crear rol SuperAdmin:**
+- Ir a Azure AD → App registrations → App roles
+- Crear nuevo rol:
+  - **Value**: `SuperAdmin`
+  - **Display name**: `Super Administrador`
+  - **Description**: `Gestor de todas las academias del SaaS`
+
+**2. Asignar rol al usuario:**
+- Azure AD → Enterprise applications → Users and groups
+- Asignar rol `SuperAdmin` a `superadmin@aphellion.com`
+
+**3. Backend - Políticas de autorización:**
+
+```csharp
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("SuperAdminOnly", policy => 
+        policy.RequireRole("SuperAdmin"));
+    
+    options.AddPolicy("AdminOrSuperAdmin", policy => 
+        policy.RequireRole("Admin", "SuperAdmin"));
+});
+```
+
+**4. Lógica de filtrado:**
+
+```csharp
+public async Task<List<Alumno>> GetAlumnos()
+{
+    var user = await _userManager.GetUserAsync(User);
+    var roles = await _userManager.GetRolesAsync(user);
+    
+    // SuperAdmin → Ve TODOS sin filtro
+    if (roles.Contains("SuperAdmin"))
+    {
+        return await _context.Alumnos.ToListAsync();
+    }
+    
+    // Admin → Ve solo su tenant
+    var tenantId = user.TenantId;
+    return await _context.Alumnos
+        .Where(a => a.TenantId == tenantId)
+        .ToListAsync();
+}
+```
+
+**5. Frontend - UI condicional:**
+
+```tsx
+{user.roles?.includes('SuperAdmin') && (
+  <>
+    <hr className="my-2" />
+    <div className="text-xs text-gray-500 px-4">Super Admin</div>
+    <NavLink to="/gestion-suscripciones">
+      Gestión de Suscripciones
+    </NavLink>
+    <NavLink to="/gestion-tenants">
+      Gestión de Academias
+    </NavLink>
+  </>
+)}
+
+{/* Todos los admins ven Mi Suscripción */}
+<NavLink to="/mi-suscripcion">
+  Mi Suscripción
+</NavLink>
+```
+
+#### **Configuración Recomendada para Inicio:**
+
+**Usuario con DOBLE ROL (Simplicidad Operativa):**
+
+```sql
+-- Usuario actual de Chetango mantiene su TenantId
+UPDATE AspNetUsers 
+SET TenantId = 'tenant-corp-chet-guid'
+WHERE Email = 'chetango.corporacion@corporacionchetango.com';
+
+-- En Azure AD se le asignan AMBOS roles:
+-- - Admin (gestiona su academia)
+-- - SuperAdmin (gestiona todas las academias)
+```
+
+**Resultado:**
+- Una sola sesión para todo
+- Ve "Mi Suscripción" (como admin de Corp. Chetango)
+- Ve "Gestión de Suscripciones" (como SuperAdmin de todas las academias)
+- Backend verifica rol SuperAdmin para decidir si filtrar por TenantId o no
+
+**Migración futura:** Cuando tengas 10+ academias, puedes crear usuario SuperAdmin dedicado con TenantId = NULL
 
 ---
 
@@ -2324,28 +2490,53 @@ az webapp config ssl create `
 
 ---
 
-## 📋 GUÍA RÁPIDA: ONBOARDING DE NUEVO CLIENTE
+## ✨ GUÍA RÁPIDA: AGREGAR NUEVO CLIENTE
 
-### Paso a Paso para Agregar una Nueva Academia
+> **IMPORTANTE:** Esta guía asume que ya completaste la FASE 1 (implementación de TenantId en código).  
+> **Estado actual (Feb 2026):** Infraestructura de dominio lista, falta implementar lógica multi-tenant en aplicación.
 
-#### 1️⃣ **Pre-Registro: Información Requerida**
+### 📋 Pre-requisitos
 
-Solicitar al cliente:
-- ✅ Nombre oficial de la academia
-- ✅ Subdomain deseado (ej: `salsa-cali`, `bachata-bogota`)
-- ✅ Email de contacto principal
-- ✅ Plan elegido (Básico / Profesional / Enterprise)
-- ✅ Logo en PNG transparente (400x100px recomendado) - opcional
-- ✅ Colores corporativos en formato hex - opcional
+Antes de agregar un nuevo cliente, verifica:
+- ✅ Tabla `Tenants` creada en base de datos
+- ✅ Columna `TenantId` agregada a todas las tablas principales
+- ✅ Middleware de resolución de tenant implementado
+- ✅ Global Query Filters configurados en Entity Framework
+- ✅ Wildcard DNS `*.aphellion.com` configurado (✅ YA HECHO)
+- ✅ Wildcard SSL o certificado para subdomain (Azure lo genera automático)
 
-#### 2️⃣ **Validación y Creación en Base de Datos**
+---
+
+### 🚀 PROCESO DE ONBOARDING (30-45 minutos)
+
+#### 1️⃣ **Recolectar Información del Cliente**
+
+Solicitar por email/call:
+- ✅ **Nombre oficial:** "Academia Salsa Caleña"
+- ✅ **Subdomain deseado:** `salsa-cali` (será: salsa-cali.aphellion.com)
+- ✅ **Email contacto:** admin@salsacali.com
+- ✅ **Plan elegido:** Básico / Profesional / Enterprise
+- ✅ **Logo (opcional):** PNG transparente, 400x100px, <2MB
+- ✅ **Colores corporativos (opcional):** Formato hex (#FF5733, #3498DB)
+- ✅ **Teléfono/WhatsApp:** Para soporte
+
+**Validar subdomain:**
+- ❌ NO usar: guiones al inicio/final, caracteres especiales, mayúsculas
+- ✅ Formato válido: `salsa-cali`, `bachata-bogota`, `danza-medellin`
+- ✅ Longitud: 3-30 caracteres
+
+---
+
+#### 2️⃣ **Crear Tenant en Base de Datos**
 
 ```sql
--- Verificar que subdomain NO exista
-SELECT COUNT(*) FROM Tenants WHERE Subdomain = 'nuevo-cliente';
--- Debe retornar 0
+-- PASO 2.1: Verificar que subdomain esté disponible
+SELECT COUNT(*) FROM Tenants WHERE Subdomain = 'salsa-cali';
+-- Debe retornar 0. Si retorna >0, el subdomain ya existe.
 
--- Crear nuevo tenant
+-- PASO 2.2: Crear nuevo tenant
+DECLARE @TenantId UNIQUEIDENTIFIER = NEWID();
+
 INSERT INTO Tenants (
     Id,
     Nombre,
@@ -2353,116 +2544,457 @@ INSERT INTO Tenants (
     Plan,
     Estado,
     FechaRegistro,
+    FechaVencimientoPlan,
     MaxSedes,
     MaxAlumnos,
     MaxProfesores,
     MaxStorageMB,
     EmailContacto,
+    TelefonoContacto,
     ColorPrimario,
     ColorSecundario,
-    CreadoPor
+    LogoUrl,
+    CreadoPor,
+    FechaCreacion
 ) VALUES (
-    NEWID(),
-    'Academia Salsa Caleña',
-    'salsa-cali',
-    'Profesional',
-    'Activo',
-    GETDATE(),
-    2,      -- Plan Profesional: hasta 2 sedes
-    300,    -- Plan Profesional: hasta 300 alumnos
-    15,     -- Plan Profesional: hasta 15 profesores
-    51200,  -- 50 GB en MB
-    'admin@salsacali.com',
-    '#FF5733',  -- Color naranja (o NULL para usar default)
-    '#3498DB',  -- Color azul (o NULL para usar default)
-    'ADMIN'
+    @TenantId,
+    'Academia Salsa Caleña',                  -- Nombre oficial
+    'salsa-cali',                             -- Subdomain
+    'Profesional',                            -- Plan: Basico, Profesional, Enterprise
+    'Activo',                                 -- Estado: Activo, Prueba, Suspendido, Cancelado
+    GETDATE(),                                -- Fecha de registro
+    DATEADD(MONTH, 1, GETDATE()),            -- Vencimiento: 1 mes prueba
+    
+    -- Límites según plan (ajustar según plan elegido)
+    2,          -- MaxSedes (Básico=1, Profesional=2, Enterprise=ilimitado)
+    300,        -- MaxAlumnos (Básico=100, Profesional=300, Enterprise=ilimitado)
+    15,         -- MaxProfesores (Básico=5, Profesional=15, Enterprise=ilimitado)
+    51200,      -- MaxStorage en MB (Básico=10GB, Profesional=50GB, Enterprise=ilimitado)
+    
+    'admin@salsacali.com',                    -- Email
+    '+57 300 123 4567',                       -- Teléfono
+    '#FF5733',                                -- Color primario (naranja) - NULL para default
+    '#3498DB',                                -- Color secundario (azul) - NULL para default
+    NULL,                                     -- LogoUrl (se actualiza en paso 3)
+    'ADMIN',                                  -- Usuario que creó el tenant
+    GETDATE()
 );
+
+-- PASO 2.3: Guardar TenantId para usar en pasos siguientes
+SELECT @TenantId AS TenantId, Subdomain, Nombre, EmailContacto 
+FROM Tenants 
+WHERE Id = @TenantId;
 ```
+
+**Límites por Plan:**
+| Plan | MaxSedes | MaxAlumnos | MaxProfesores | MaxStorageMB |
+|------|----------|------------|---------------|--------------|
+| Básico | 1 | 100 | 5 | 10240 (10 GB) |
+| Profesional | 2 | 300 | 15 | 51200 (50 GB) |
+| Enterprise | 999 | 99999 | 999 | 999999 (ilimitado) |
+
+---
 
 #### 3️⃣ **Subir Logo a Azure Storage** (si el cliente lo proporciona)
 
-```powershell
-# Obtener TenantId recién creado
-$tenantId = "..." # Del INSERT anterior
+**OPCIÓN A: Usar Azure Portal (más fácil)**
+1. Ve a **Azure Portal** → **Storage Account** → `chetangostorage`
+2. Click en **Containers** → `tenant-logos` (crear si no existe)
+3. Configurar nivel de acceso: **Blob (anonymous read access for blobs only)**
+4. Click **Upload** → Seleccionar archivo `logo-salsa-cali.png`
+5. En "Advanced", establecer nombre como: `{TenantId}/logo.png`
+6. Copiar la URL del blob subido
 
-# Subir logo a Azure Storage
+**OPCIÓN B: Usar PowerShell (automatizado)**
+```powershell
+# Variables
+$tenantId = "xxx-xxx-xxx-xxx-xxx"  # Del PASO 2.3
+$logoPath = "C:\path\to\logo-salsa-cali.png"
+$storageAccount = "chetangostorage"
+$container = "tenant-logos"
+
+# Subir logo
 az storage blob upload `
-  --account-name chetangostorage `
-  --container-name tenant-logos `
+  --account-name $storageAccount `
+  --container-name $container `
   --name "$tenantId/logo.png" `
-  --file "C:\path\to\logo-cliente.png" `
-  --content-type "image/png"
+  --file $logoPath `
+  --content-type "image/png" `
+  --auth-mode login
 
 # Obtener URL pública
 $logoUrl = az storage blob url `
-  --account-name chetangostorage `
-  --container-name tenant-logos `
+  --account-name $storageAccount `
+  --container-name $container `
   --name "$tenantId/logo.png" `
-  --output tsv
+  --output tsv `
+  --auth-mode login
+
+Write-Host "Logo URL: $logoUrl"
 ```
 
+**Actualizar LogoUrl en base de datos:**
 ```sql
--- Actualizar LogoUrl en base de datos
 UPDATE Tenants 
 SET LogoUrl = 'https://chetangostorage.blob.core.windows.net/tenant-logos/{tenantId}/logo.png'
 WHERE Id = '{tenantId}';
 ```
 
-#### 4️⃣ **Crear Usuario Administrador Inicial**
+---
+
+#### 4️⃣ **Configurar Custom Domain en Azure Static Web App**
+
+**PASO 4.1: Agregar subdomain al Static Web App**
+1. Ve a **Azure Portal** → **Static Web Apps** → `chetango-app-prod`
+2. Click en **Custom domains** (menú izquierdo)
+3. Click **+ Add** → **Custom domain on other DNS**
+4. Ingresar: `salsa-cali.aphellion.com`
+5. Tipo: **CNAME**
+6. Click **Next**
+7. Azure te mostrará un registro CNAME a crear
+
+**PASO 4.2: Crear registro CNAME en Azure DNS**
+1. Ve a **Azure Portal** → **DNS zones** → `aphellion.com`
+2. Click **+ Record set**
+3. Configurar:
+   - **Name:** `salsa-cali`
+   - **Type:** CNAME
+   - **Alias:** `delightful-plant-02670d70f.azurestaticapps.net` (tu Static Web App)
+   - **TTL:** 3600 segundos
+4. Click **OK**
+
+**PASO 4.3: Validar y generar SSL**
+1. Regresa a Static Web App → Custom domains
+2. Click **Validate** en el custom domain agregado
+3. Espera 2-5 minutos (validación DNS + generación SSL automática)
+4. Verifica que aparezca "Ready" con icono verde ✅
+
+**Verificar en navegador:**
+```
+https://salsa-cali.aphellion.com
+```
+Debe cargar sin errores SSL y mostrar el login.
+
+---
+
+#### 5️⃣ **Actualizar CORS en Azure App Service**
+
+Cada nuevo subdomain debe agregarse a CORS:
+
+1. Ve a **Azure Portal** → **App Services** → `chetango-api-prod`
+2. Click en **CORS** (menú izquierdo, sección API)
+3. En "Allowed Origins", agregar nueva línea:
+   ```
+   https://salsa-cali.aphellion.com
+   ```
+4. Mantener marcado: **Enable Access-Control-Allow-Credentials**
+5. Click **Save**
+6. **Reiniciar App Service** (botón Restart arriba)
+
+---
+
+#### 6️⃣ **Crear Usuario Administrador del Cliente**
 
 ```sql
--- Crear usuario admin del cliente
+-- Crear admin del nuevo tenant
+DECLARE @TenantId UNIQUEIDENTIFIER = 'xxx-xxx-xxx-xxx';  -- Del PASO 2.3
+DECLARE @AdminUserId UNIQUEIDENTIFIER = NEWID();
+
 INSERT INTO Usuarios (
     Id,
     TenantId,
-    Email,
+    Correo,
     Nombre,
-    Rol,
+    Apellido,
+    TipoDocumento,
+    NumeroDocumento,
+    Telefono,
     Estado,
     FechaCreacion
 ) VALUES (
-    NEWID(),
-    '{tenantId}',  -- Del paso anterior
+    @AdminUserId,
+    @TenantId,
     'admin@salsacali.com',
     'Administrador',
-    'Admin',
+    'Sistema',
+    'CC',
+    '1234567890',
+    '+57 300 123 4567',
     'Activo',
     GETDATE()
 );
+
+-- Asignar rol de Admin
+INSERT INTO UsuarioRoles (
+    UsuarioId,
+    Rol,
+    FechaAsignacion
+) VALUES (
+    @AdminUserId,
+    'Admin',
+    GETDATE()
+);
+
+-- Verificar creación
+SELECT u.Id, u.Correo, u.Nombre, u.Estado, t.Subdomain, t.Nombre AS Academia
+FROM Usuarios u
+INNER JOIN Tenants t ON u.TenantId = t.Id
+WHERE u.Id = @AdminUserId;
 ```
 
-#### 5️⃣ **Verificación de Acceso**
+---
 
-**Probar en navegador (modo incógnito):**
+#### 7️⃣ **Actualizar Azure AD (si es necesario)**
+
+Si el cliente usará Microsoft Entra ID para autenticación:
+
+1. Ve a **Azure Portal** → **Microsoft Entra ID** → **App registrations**
+2. Selecciona tu aplicación (Client ID: d35c1d4d-9ddc-4a8b-bb89-1964b37ff573)
+3. Click en **Authentication** → **Web** → **Redirect URIs**
+4. Agregar nueva URI:
+   ```
+   https://salsa-cali.aphellion.com
+   ```
+5. Click **Save**
+
+---
+
+#### 8️⃣ **Testing Pre-Entrega**
+
+**Test 1: Verificar acceso al subdomain**
+```bash
+# Debe resolver correctamente
+nslookup salsa-cali.aphellion.com
+
+# Debe devolver IP del Static Web App
 ```
-https://salsa-cali.chetango.com
-```
 
-**Verificar que se vea:**
-- ✅ Logo del cliente (si lo proporcionó)
-- ✅ Colores personalizados (si los configuró)
-- ✅ Nombre de la academia en el título
-- ✅ Sin errores en consola del navegador
+**Test 2: Verificar SSL**
+- Abrir: https://salsa-cali.aphellion.com
+- Click en candado (navegador)
+- Verificar certificado válido y emitido por Azure
 
-**Query de verificación:**
+**Test 3: Verificar login**
+- Intentar login con: admin@salsacali.com
+- Debe mostrar pantalla de Microsoft/Azure AD
+- Debe redirigir correctamente después de autenticar
+
+**Test 4: Verificar aislamiento de datos**
 ```sql
-SELECT 
-    Subdomain,
-    Nombre,
-    LogoUrl,
-    ColorPrimario,
-    ColorSecundario,
-    Estado,
-    Plan
-FROM Tenants
-WHERE Subdomain = 'salsa-cali';
+-- Simular query que filtra por TenantId
+SELECT COUNT(*) FROM Usuarios WHERE TenantId = '{tenantId}';
+-- Debe retornar solo usuarios de ese tenant
+
+-- Verificar que NO se vean usuarios de otros tenants
+SELECT COUNT(*) FROM Usuarios WHERE TenantId <> '{tenantId}';
+-- Debe retornar >0 (otros tenants existen) pero no deben ser accesibles via API
 ```
 
-#### 6️⃣ **Email de Bienvenida**
+**Test 5: Verificar branding**
+- Logo debe mostrarse en header
+- Colores corporativos deben aplicarse
+- Título debe mostrar nombre de la academia
 
-Enviar email al cliente con:
-- ✅ URL de acceso: `https://{subdomain}.chetango.com`
-- ✅ Credenciales iniciales (si aplica)
+---
+
+#### 9️⃣ **Email de Bienvenida al Cliente**
+
+```
+Asunto: ¡Bienvenido a Aphellion! Tu plataforma está lista 🎉
+
+Hola [Nombre Cliente],
+
+¡Tu academia ya está configurada en Aphellion!
+
+🌐 Accede a tu plataforma:
+https://salsa-cali.aphellion.com
+
+🔑 Credenciales iniciales:
+Usuario: admin@salsacali.com
+Contraseña: [usar sistema de reset password o Microsoft auth]
+
+📅 Tu plan: Profesional ($350,000 COP/mes)
+Vencimiento: [Fecha]
+
+🎨 Personalización:
+- Tu logo ya está configurado
+- Colores corporativos aplicados
+- Puedes ajustarlos desde: Configuración → Branding
+
+📚 Próximos pasos:
+1. Configurar tus sedes y horarios
+2. Agregar profesores
+3. Importar alumnos existentes (podemos ayudarte)
+4. Crear paquetes de clases
+5. Generar códigos QR para asistencias
+
+📞 Soporte:
+Email: soporte@aphellion.com
+WhatsApp: [número]
+Horario: Lun-Vie 9am-6pm
+
+¡Gracias por confiar en nosotros!
+
+Equipo Aphellion
+```
+
+---
+
+#### 🔟 **Onboarding Call** (Para Profesional/Enterprise)
+
+Agendar sesión de 30-45 minutos vía Zoom/Meet:
+
+**Agenda:**
+1. **Configuración inicial (15 min)**
+   - Crear sedes y asignar direcciones
+   - Configurar horarios por sede
+   - Ajustar branding si es necesario
+
+2. **Gestión de usuarios (10 min)**
+   - Importar alumnos (CSV o manual)
+   - Agregar profesores con roles
+   - Explicar sistema de permisos
+
+3. **Paquetes y pagos (10 min)**
+   - Crear tipos de paquetes (mensual, trimestral, etc.)
+   - Configurar precios y descuentos
+   - Explicar registro de pagos
+
+4. **Asistencias QR (10 min)**
+   - Demostrar check-in con QR
+   - Explicar confirmación de asistencias
+   - Mostrar reportes de asistencia
+
+5. **Dashboard y reportes (5 min)**
+   - Recorrido por dashboard principal
+   - Reportes financieros más usados
+   - Explicar filtros por fecha/sede
+
+**Material de apoyo:**
+- Video tutorial de 5 minutos
+- PDF con guía rápida
+- FAQs comunes
+
+---
+
+### 🛠️ TROUBLESHOOTING COMÚN
+
+#### ❌ Problema: "Subdomain no resuelve"
+**Causa:** DNS no propagado o CNAME mal configurado
+**Solución:**
+1. Verificar CNAME en Azure DNS:
+   ```bash
+   nslookup salsa-cali.aphellion.com
+   ```
+2. Debe retornar CNAME a `delightful-plant-02670d70f.azurestaticapps.net`
+3. Si no resuelve, esperar 5-10 minutos (propagación DNS)
+4. Limpiar caché DNS local:
+   ```bash
+   ipconfig /flushdns  # Windows
+   sudo dscacheutil -flushcache  # macOS
+   ```
+
+#### ❌ Problema: "Error SSL / Not Secure"
+**Causa:** Certificado no generado o custom domain no validado
+**Solución:**
+1. Ve a Static Web App → Custom domains
+2. Verificar estado del custom domain:
+   - ✅ "Ready" = OK
+   - ⚠️ "Validating" = Esperar 2-5 min
+   - ❌ "Failed" = Revisar CNAME
+3. Si falla, eliminar custom domain y volver a agregar
+
+#### ❌ Problema: "CORS error" en consola del navegador
+**Causa:** Subdomain no agregado a CORS en App Service
+**Solución:**
+1. Azure Portal → App Service → CORS
+2. Agregar: `https://salsa-cali.aphellion.com`
+3. Guardar y **reiniciar App Service**
+4. Esperar 1-2 minutos y recargar página
+
+#### ❌ Problema: "Logo no se muestra"
+**Causa:** URL incorrecta, blob privado, o logo muy pesado
+**Solución:**
+1. Verificar URL en base de datos:
+   ```sql
+   SELECT LogoUrl FROM Tenants WHERE Subdomain = 'salsa-cali';
+   ```
+2. Abrir URL en navegador (debe descargar/mostrar imagen)
+3. Si da error 404/403:
+   - Verificar que blob container sea público (Blob anonymous read access)
+   - Verificar nombre del archivo: `{tenantId}/logo.png`
+4. Si logo es muy pesado (>2MB), redimensionar y re-subir
+
+#### ❌ Problema: "Colores no aplican"
+**Causa:** Formato hex inválido o CSS no regenerado
+**Solución:**
+1. Verificar formato en BD:
+   ```sql
+   SELECT ColorPrimario, ColorSecundario 
+   FROM Tenants 
+   WHERE Subdomain = 'salsa-cali';
+   ```
+2. Debe ser formato `#RRGGBB` (6 dígitos hex, con #)
+3. Recargar página con Ctrl+Shift+R (hard refresh)
+4. Verificar en DevTools → Elements → CSS variables
+
+#### ❌ Problema: "Cliente no puede hacer login"
+**Causa:** Usuario no existe, tenant inactivo, o Azure AD mal configurado
+**Solución:**
+1. Verificar usuario en BD:
+   ```sql
+   SELECT u.*, t.Subdomain, t.Estado AS TenantEstado
+   FROM Usuarios u
+   INNER JOIN Tenants t ON u.TenantId = t.Id
+   WHERE u.Correo = 'admin@salsacali.com';
+   ```
+2. Verificar:
+   - Usuario.Estado = 'Activo'
+   - Tenant.Estado = 'Activo'
+   - Tenant.FechaVencimientoPlan > GETDATE()
+3. Si usa Azure AD, verificar redirect URI configurado
+
+---
+
+### 📊 CHECKLIST FINAL DE ONBOARDING
+
+Antes de entregar al cliente, verificar:
+
+- ✅ Tenant creado en BD con datos correctos
+- ✅ Subdomain resuelve correctamente (DNS)
+- ✅ SSL activo y válido (https sin warnings)
+- ✅ CORS configurado para nuevo subdomain
+- ✅ Logo subido y visible (si aplica)
+- ✅ Colores corporativos aplicados (si aplica)
+- ✅ Usuario admin creado con rol correcto
+- ✅ Azure AD redirect URI configurado (si aplica)
+- ✅ Login funcional sin errores
+- ✅ Dashboard carga correctamente
+- ✅ Email de bienvenida enviado
+- ✅ Onboarding call agendado (Profesional/Enterprise)
+- ✅ Documentación compartida
+- ✅ Cliente agregado a canal de soporte
+
+**Tiempo estimado total:** 30-45 minutos (excluyendo call de onboarding)
+
+---
+
+### 💡 TIPS PARA ESCALAR
+
+**Automatizar en el futuro (FASE 2):**
+- 🔄 Crear script de PowerShell que ejecute pasos 2-6 automáticamente
+- 🔄 Página web de auto-registro donde cliente ingresa datos y sistema crea tenant
+- 🔄 Integración con Stripe/Wompi para cobro automático
+- 🔄 Email de bienvenida automático con credenciales
+- 🔄 Dashboard de administración de tenants para equipo interno
+
+**Para 50+ clientes:**
+- Considerar Azure Functions para tareas de onboarding
+- Implementar cola (Azure Service Bus) para procesar creaciones de tenants
+- Auto-scaling de Static Web App (ya incluido en Azure)
+- Monitoreo proactivo con Application Insights
+
+---
 - ✅ Link a documentación de onboarding
 - ✅ Información sobre cómo personalizar branding desde `/admin/configuracion/branding`
 - ✅ Contacto de soporte
@@ -2555,14 +3087,57 @@ Agendar sesión de 30-45 minutos para:
 
 **Cada vez que se incorpore un nuevo cliente:**
 
-1. ✅ Validar subdomain disponible
-2. ✅ Crear tenant en base de datos
-3. ✅ **Solicitar y subir logo del cliente**
-4. ✅ **Configurar colores corporativos (primario, secundario)**
-5. ✅ Verificar en navegador: `https://{subdomain}.chetango.com`
-6. ✅ Confirmar que logo y colores se vean correctamente
-7. ✅ Enviar credenciales de acceso
-8. ✅ Mostrar al cliente cómo personalizar desde `/admin/configuracion/branding`
+1. ✅ Validar subdomain disponible en BD
+2. ✅ Crear tenant con límites según plan
+3. ✅ Configurar custom domain en Azure Static Web App
+4. ✅ Crear CNAME en Azure DNS Zone (aphellion.com)
+5. ✅ Agregar subdomain a CORS en App Service
+6. ✅ **Solicitar y subir logo del cliente** (opcional)
+7. ✅ **Configurar colores corporativos** (opcional)
+8. ✅ Crear usuario administrador del cliente
+9. ✅ Verificar acceso: `https://{subdomain}.aphellion.com`
+10. ✅ Confirmar SSL activo (candado verde en navegador)
+11. ✅ Confirmar login funcional
+12. ✅ Confirmar logo y colores correctos
+13. ✅ Enviar email de bienvenida con credenciales
+14. ✅ Agendar onboarding call (Profesional/Enterprise)
+
+**Documentos de referencia:**
+- [GUÍA COMPLETA DE ONBOARDING](#guía-rápida-agregar-nuevo-cliente) (ver sección anterior)
+- [MIGRACION-DOMINIO-NUEVO.md](./MIGRACION-DOMINIO-NUEVO.md) - Info sobre configuración de DNS
+
+---
+
+## 🎯 PRÓXIMOS PASOS INMEDIATOS
+
+### ✅ COMPLETADO (Febrero 2026)
+- [x] Migración a dominio neutral (aphellion.com)
+- [x] Configuración de wildcard DNS (*.aphellion.com)
+- [x] Configuración de SSL automático
+- [x] Corporación Chetango migrado a corporacionchetango.aphellion.com
+
+### 🔄 EN PROGRESO - FASE 1 (2-3 semanas)
+- [ ] Crear tabla `Tenants` en base de datos
+- [ ] Agregar columna `TenantId` a todas las tablas principales
+- [ ] Implementar middleware de resolución de tenant (extraer subdomain)
+- [ ] Configurar Global Query Filters en Entity Framework Core
+- [ ] Implementar TenantContext y TenantResolver
+- [ ] Testing exhaustivo de aislamiento de datos
+
+### 📅 SIGUIENTE - FASE 2 (3-4 semanas)
+- [ ] Página de registro self-service
+- [ ] Integración de pagos (Stripe o Wompi)
+- [ ] Sistema de gestión de suscripciones
+- [ ] Dashboard de branding para clientes
+- [ ] Panel de administración de tenants (interno)
+- [ ] Sistema de métricas por tenant
+
+### 🚀 FUTURO - FASE 3 (Mes 3-4)
+- [ ] Lanzar beta con 5 academias (50% descuento)
+- [ ] Escalar infraestructura a S0 + B2
+- [ ] Implementar Application Insights
+- [ ] Configurar alertas de monitoreo
+- [ ] Documentación completa para usuarios finales
 
 **Patrón estándar de la industria usado por:** Shopify, Slack, Zendesk, Notion, HubSpot, Salesforce.
 
