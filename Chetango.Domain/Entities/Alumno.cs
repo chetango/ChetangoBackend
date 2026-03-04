@@ -35,6 +35,10 @@ namespace Chetango.Domain.Entities
 
         // Relaciones
         // Paquetes ahora navegan desde Paquete -> Alumno
+        // Multi-tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
         public ICollection<Pago> Pagos { get; set; } = new List<Pago>();
         public ICollection<Asistencia> Asistencias { get; set; } = new List<Asistencia>();
     }

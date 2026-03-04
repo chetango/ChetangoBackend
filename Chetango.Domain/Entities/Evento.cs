@@ -20,6 +20,10 @@ public class Evento
     public DateTime? FechaModificacion { get; set; }
     public Guid IdUsuarioCreador { get; set; }
     
+    // Multi-Tenancy
+    public Guid? TenantId { get; set; }
+    public Tenant? Tenant { get; set; }
+    
     // Navigation
     public Usuario UsuarioCreador { get; set; } = null!;
 }

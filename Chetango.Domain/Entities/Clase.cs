@@ -12,6 +12,10 @@ namespace Chetango.Domain.Entities
         public int CupoMaximo { get; set; }
         public string? Observaciones { get; set; }
         public string Estado { get; set; } = "Programada"; // Programada, EnCurso, Completada, Cancelada
+        
+        // Multi-Tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
 
         // DEPRECATED: Usar ClaseProfesor para obtener profesores con sus roles
         // Mantenido temporalmente para retrocompatibilidad

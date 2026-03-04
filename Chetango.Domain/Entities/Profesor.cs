@@ -25,6 +25,10 @@ namespace Chetango.Domain.Entities.Estados
         public bool AlertasCambios { get; set; } = true;
 
         // Relaciones
+        // Multi-tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
         public ICollection<Clase> Clases { get; set; } = new List<Clase>();
         public ICollection<MonitorClase> MonitorClases { get; set; } = new List<MonitorClase>();
         public ICollection<TarifaProfesor> Tarifas { get; set; } = new List<TarifaProfesor>();

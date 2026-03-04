@@ -62,11 +62,16 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<bool>("RecordatoriosClase")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("IdAlumno");
 
                     b.HasIndex("IdEstado");
 
                     b.HasIndex("IdUsuario");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Alumnos", (string)null);
                 });
@@ -143,11 +148,16 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<string>("Observaciones")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("IdClase");
 
                     b.HasIndex("IdProfesorPrincipal");
 
                     b.HasIndex("IdTipoClase");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("Fecha", "IdTipoClase");
 
@@ -299,6 +309,71 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.ToTable("ConfiguracionesNotificaciones", (string)null);
                 });
 
+            modelBuilder.Entity("Chetango.Domain.Entities.ConfiguracionPago", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Banco")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreadoPor")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasDefaultValueSql("SUSER_SNAME()");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("MostrarEnPortal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("NIT")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("NumeroCuenta")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TipoCuenta")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Titular")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ConfiguracionPagos", (string)null);
+                });
+
             modelBuilder.Entity("Chetango.Domain.Entities.CongelacionPaquete", b =>
                 {
                     b.Property<Guid>("IdCongelacion")
@@ -360,6 +435,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("UsuarioCreacion")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -380,6 +458,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("IdPaqueteUsado");
 
                     b.HasIndex("IdTipoAsistencia");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("IdClase", "IdAlumno")
                         .IsUnique();
@@ -893,6 +973,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("IdTipoPaquete")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("UsuarioCreacion")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -914,6 +997,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("IdPago");
 
                     b.HasIndex("IdTipoPaquete");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("IdAlumno", "FechaVencimiento");
 
@@ -952,11 +1037,16 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasDefaultValue(0m);
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("IdProfesor");
 
                     b.HasIndex("IdTipoProfesor");
 
                     b.HasIndex("IdUsuario");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Profesores", (string)null);
                 });
@@ -1246,6 +1336,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("Precio")
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("TipoAudiencia")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1264,6 +1357,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("Fecha");
 
                     b.HasIndex("IdUsuarioCreador");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Eventos", (string)null);
                 });
@@ -1311,6 +1406,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<int>("Sede")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("TotalAdicionales")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(18,2)")
@@ -1333,6 +1431,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreadoPorIdUsuario");
 
                     b.HasIndex("Estado");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("IdProfesor", "Mes", "Año")
                         .IsUnique();
@@ -1413,6 +1513,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<int>("Sede")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("UrlFactura")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1439,6 +1542,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("IdCategoriaGasto");
 
                     b.HasIndex("Sede");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("Fecha", "Sede");
 
@@ -1488,6 +1593,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<int>("Sede")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("UrlComprobante")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1514,6 +1622,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("IdCategoriaIngreso");
 
                     b.HasIndex("Sede");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("Fecha", "Sede");
 
@@ -1572,6 +1682,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<int>("Sede")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("UrlComprobante")
                         .HasColumnType("nvarchar(max)");
 
@@ -1601,7 +1714,105 @@ namespace Chetango.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("IdMetodoPago");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("Pagos", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.PagoSuscripcion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AprobadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ComprobanteUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CreadoPor")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasDefaultValueSql("SUSER_SNAME()");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pendiente");
+
+                    b.Property<string>("EstadoTransaccion")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("FechaAprobacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaPago")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MetodoPago")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("Monto")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("NombreArchivo")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Referencia")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("TamanoArchivo")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TransaccionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("FechaPago");
+
+                    b.HasIndex("Referencia")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "FechaPago");
+
+                    b.ToTable("PagosSuscripcion", (string)null);
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.SolicitudClasePrivada", b =>
@@ -1649,6 +1860,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("TipoClaseDeseado")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1661,6 +1875,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.HasIndex("FechaSolicitud");
 
                     b.HasIndex("IdAlumno");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("SolicitudesClasePrivada", (string)null);
                 });
@@ -1707,6 +1923,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("TipoPaqueteDeseado")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1720,7 +1939,163 @@ namespace Chetango.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("IdAlumno");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("SolicitudesRenovacionPaquete", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ColorAccent")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("ColorPrimario")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("ColorSecundario")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Dominio")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EmailContacto")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Activo");
+
+                    b.Property<string>("FaviconUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaVencimientoPlan")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("MaxAlumnos")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxProfesores")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxSedes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxStorageMB")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MetodoPagoPreferido")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NombreComercial")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("StripeCustomerId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Subdomain")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TelefonoContacto")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("WompiSubscriptionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmailContacto")
+                        .IsUnique();
+
+                    b.HasIndex("Subdomain")
+                        .IsUnique();
+
+                    b.ToTable("Tenants", (string)null);
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.TenantUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("FechaAsignacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdUsuario")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdUsuario");
+
+                    b.HasIndex("TenantId", "IdUsuario")
+                        .IsUnique();
+
+                    b.ToTable("TenantUsers", (string)null);
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.TipoAsistencia", b =>
@@ -1898,6 +2273,9 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("IdUsuario");
 
                     b.HasIndex("Correo")
@@ -1912,6 +2290,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("NumeroDocumento")
                         .IsUnique();
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Usuarios", (string)null);
                 });
@@ -1930,7 +2310,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("Estado");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("Usuario");
                 });
@@ -1959,7 +2345,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("ProfesorPrincipal");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("TipoClase");
                 });
@@ -2051,6 +2443,10 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("Alumno");
 
                     b.Navigation("Clase");
@@ -2058,6 +2454,8 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Navigation("Estado");
 
                     b.Navigation("PaqueteUsado");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("TipoAsistencia");
                 });
@@ -2106,11 +2504,17 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("Alumno");
 
                     b.Navigation("Estado");
 
                     b.Navigation("Pago");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("TipoPaquete");
                 });
@@ -2128,6 +2532,12 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasForeignKey("IdUsuario")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("TipoProfesor");
 
@@ -2165,6 +2575,12 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.Navigation("Tenant");
+
                     b.Navigation("UsuarioCreador");
                 });
 
@@ -2182,9 +2598,15 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("CreadoPor");
 
                     b.Navigation("Profesor");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.MonitorClase", b =>
@@ -2213,7 +2635,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasForeignKey("IdCategoriaGasto")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("CategoriaGasto");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.OtroIngreso", b =>
@@ -2223,7 +2651,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasForeignKey("IdCategoriaIngreso")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("CategoriaIngreso");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Pago", b =>
@@ -2245,11 +2679,28 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("Alumno");
 
                     b.Navigation("EstadoPago");
 
                     b.Navigation("MetodoPago");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.PagoSuscripcion", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("PagosSuscripcion")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.SolicitudClasePrivada", b =>
@@ -2260,7 +2711,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("Alumno");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.SolicitudRenovacionPaquete", b =>
@@ -2271,7 +2728,32 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("Alumno");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.TenantUser", b =>
+                {
+                    b.HasOne("Chetango.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.UsoCodigoReferido", b =>
@@ -2315,7 +2797,13 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chetango.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.Navigation("Estado");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("TipoDocumento");
                 });
@@ -2412,6 +2900,11 @@ namespace Chetango.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Chetango.Domain.Entities.Pago", b =>
                 {
                     b.Navigation("Paquetes");
+                });
+
+            modelBuilder.Entity("Chetango.Domain.Entities.Tenant", b =>
+                {
+                    b.Navigation("PagosSuscripcion");
                 });
 
             modelBuilder.Entity("Chetango.Domain.Entities.Usuario", b =>
