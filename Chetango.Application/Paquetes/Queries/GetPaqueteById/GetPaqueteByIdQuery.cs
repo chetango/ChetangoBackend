@@ -42,13 +42,15 @@ public class GetPaqueteByIdQueryHandler : IRequestHandler<GetPaqueteByIdQuery, R
                 return Result<PaqueteDetalleDTO>.Failure("No tienes permiso para ver este paquete.");
         }
 
-        // 3. Mapear estado a texto (ajustado a los estados reales de la BD)
+        // 3. Mapear estado a texto considerando tanto IdEstado como la fecha de vencimiento
+        // Un paquete con IdEstado=1 pero FechaVencimiento pasada se considera Vencido
         var estadoNombre = paquete.IdEstado switch
         {
-            1 => "Activo",
-            2 => "Vencido",
             3 => "Congelado",
-            _ => paquete.ClasesUsadas >= paquete.ClasesDisponibles ? "Completado" : "Vencido"
+            4 => "Agotado",
+            _ when paquete.ClasesUsadas >= paquete.ClasesDisponibles => "Agotado",
+            _ when paquete.FechaVencimiento.Date < DateTime.Today || paquete.IdEstado == 2 => "Vencido",
+            _ => "Activo"
         };
 
         // 4. Mapear congelaciones

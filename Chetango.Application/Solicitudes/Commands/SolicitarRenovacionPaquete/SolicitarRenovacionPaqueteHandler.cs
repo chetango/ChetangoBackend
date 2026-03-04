@@ -25,11 +25,13 @@ public class SolicitarRenovacionPaqueteHandler : IRequestHandler<SolicitarRenova
         if (alumno == null)
             return Result<Guid>.Failure("No se encontró el alumno autenticado.");
 
-        // 2. Buscar paquete activo actual
+        // 2. Buscar paquete activo actual (estado Activo en BD Y fecha no vencida)
         var paqueteActivo = await _db.Paquetes
             .Include(p => p.TipoPaquete)
             .Include(p => p.Estado)
-            .Where(p => p.IdAlumno == alumno.IdAlumno && p.Estado.Nombre == "Activo")
+            .Where(p => p.IdAlumno == alumno.IdAlumno 
+                && p.Estado.Nombre == "Activo"
+                && p.FechaVencimiento >= DateTime.Today)
             .OrderByDescending(p => p.FechaActivacion)
             .FirstOrDefaultAsync(cancellationToken);
 

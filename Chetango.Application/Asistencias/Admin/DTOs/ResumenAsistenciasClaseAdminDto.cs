@@ -5,6 +5,7 @@ public enum EstadoPaqueteAdmin
     Activo,
     Agotado,
     Congelado,
+    Vencido,
     SinPaquete
 }
 

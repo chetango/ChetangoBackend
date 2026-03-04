@@ -93,11 +93,11 @@ public class GetMisPaquetesQueryHandler : IRequestHandler<GetMisPaquetesQuery, R
                 paquete.FechaActivacion,
                 paquete.FechaVencimiento,
                 paquete.ValorPaquete,
-                // Estados: 1=Activo, 2=Vencido, 3=Congelado
-                // Si está completado (clases usadas == disponibles), mostrar "Completado"
-                paquete.IdEstado == 1 ? "Activo" : 
+                // Estado efectivo: considera tanto el IdEstado de BD como la fecha de vencimiento
                 paquete.IdEstado == 3 ? "Congelado" :
-                paquete.ClasesUsadas >= paquete.ClasesDisponibles ? "Completado" : "Vencido",
+                paquete.IdEstado == 4 || paquete.ClasesUsadas >= paquete.ClasesDisponibles ? "Agotado" :
+                paquete.FechaVencimiento.Date < DateTime.Today || paquete.IdEstado == 2 ? "Vencido" :
+                "Activo",
                 paquete.FechaVencimiento < DateTime.Today,
                 (paquete.ClasesDisponibles - paquete.ClasesUsadas) > 0,
                 congelacionActiva,

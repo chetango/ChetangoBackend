@@ -87,7 +87,8 @@ public class GetPaquetesDeAlumnoQueryHandler : IRequestHandler<GetPaquetesDeAlum
 
         // 4. Aplicar filtros
         if (request.SoloActivos)
-            query = query.Where(p => p.IdEstado == 1); // 1 = Activo
+            // Solo activos reales: estado=1 (Activo en BD) Y fecha no vencida
+            query = query.Where(p => p.IdEstado == 1 && p.FechaVencimiento >= DateTime.Today);
 
         if (request.Estado.HasValue)
             query = query.Where(p => p.IdEstado == request.Estado.Value);
@@ -119,10 +120,11 @@ public class GetPaquetesDeAlumnoQueryHandler : IRequestHandler<GetPaquetesDeAlum
                 p.FechaActivacion,
                 p.FechaVencimiento,
                 p.ValorPaquete,
-                // Lógica de estado basada en IdEstado de la BD
-                p.IdEstado == 2 ? "Vencido" : 
-                p.IdEstado == 3 ? "Congelado" : 
-                p.IdEstado == 4 ? "Agotado" : 
+                // Estado efectivo: considera IdEstado, clases usadas y fecha de vencimiento
+                // Prioridad: Congelado > Agotado (clases agotadas) > Vencido (fecha) > Activo
+                p.IdEstado == 3 ? "Congelado" :
+                (p.IdEstado == 4 || p.ClasesUsadas >= p.ClasesDisponibles) ? "Agotado" :
+                (p.IdEstado == 2 || p.FechaVencimiento < DateTime.Today) ? "Vencido" :
                 "Activo",
                 p.FechaVencimiento < DateTime.Today,
                 (p.ClasesDisponibles - p.ClasesUsadas) > 0,

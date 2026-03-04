@@ -111,7 +111,7 @@ public sealed class GetResumenAsistenciasClaseAdminQueryHandler
 
             var estadoPaqueteAdmin = paquete is null
                 ? EstadoPaqueteAdmin.SinPaquete
-                : MapEstadoPaquete(paquete.Estado?.Nombre);
+                : MapEstadoPaquete(paquete.Estado?.Nombre, paquete.FechaVencimiento);
 
             int? clasesTotales = paquete?.ClasesDisponibles;
             int? clasesUsadas = paquete?.ClasesUsadas;
@@ -157,16 +157,14 @@ public sealed class GetResumenAsistenciasClaseAdminQueryHandler
             alumnos.Add(alumnoDto);
         }
 
-        // Luego, agregar paquetes de alumnos que NO tienen asistencia registrada
+        // Luego, agregar alumnos que NO tienen asistencia registrada.
+        // Si un alumno tiene múltiples paquetes activos, aparece una vez por paquete
+        // para que el admin pueda elegir a cuál descontarle la clase.
         foreach (var paquete in paquetesActivos)
         {
             var alumno = paquete.Alumno;
 
-            // Si el alumno ya tiene asistencia registrada, no mostrar sus otros paquetes
-            if (alumnosConAsistencia.Contains(alumno.IdAlumno))
-                continue;
-
-            // Si el alumno ya tiene asistencia registrada, no mostrar sus otros paquetes
+            // Si el alumno ya tiene asistencia registrada, no mostrar
             if (alumnosConAsistencia.Contains(alumno.IdAlumno))
                 continue;
 
@@ -193,8 +191,8 @@ public sealed class GetResumenAsistenciasClaseAdminQueryHandler
                 }
             }
 
-            // Mapear estado de paquete de dominio a DTO admin
-            var estadoPaqueteAdmin = MapEstadoPaquete(paquete.Estado?.Nombre);
+            // Mapear estado de paquete de dominio a DTO admin (considera fecha de vencimiento)
+            var estadoPaqueteAdmin = MapEstadoPaquete(paquete.Estado?.Nombre, paquete.FechaVencimiento);
 
             int? clasesTotales = paquete.ClasesDisponibles;
             int? clasesUsadas = paquete.ClasesUsadas;
@@ -256,18 +254,21 @@ public sealed class GetResumenAsistenciasClaseAdminQueryHandler
         return Result<ResumenAsistenciasClaseAdminDto>.Success(resumen);
     }
 
-    private static EstadoPaqueteAdmin MapEstadoPaquete(string? nombreEstado)
+    private static EstadoPaqueteAdmin MapEstadoPaquete(string? nombreEstado, DateTime? fechaVencimiento = null)
     {
         if (string.IsNullOrWhiteSpace(nombreEstado))
-        {
             return EstadoPaqueteAdmin.SinPaquete;
-        }
+
+        // Si el estado en BD es "Activo" pero la fecha ya venció, se considera Vencido
+        if (nombreEstado == "Activo" && fechaVencimiento.HasValue && fechaVencimiento.Value.Date < DateTime.Today)
+            return EstadoPaqueteAdmin.Vencido;
 
         return nombreEstado switch
         {
             "Activo" => EstadoPaqueteAdmin.Activo,
             "Agotado" => EstadoPaqueteAdmin.Agotado,
             "Congelado" => EstadoPaqueteAdmin.Congelado,
+            "Vencido" => EstadoPaqueteAdmin.Vencido,
             _ => EstadoPaqueteAdmin.SinPaquete
         };
     }
