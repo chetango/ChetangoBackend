@@ -26,6 +26,10 @@ public Guid? IdPaqueteUsado { get; set; } // Nullable: si es null = clase sin pa
         // Campo para confirmación del alumno
         public bool Confirmado { get; set; } = false; // Indica si el alumno confirmó su asistencia
         public DateTime? FechaConfirmacion { get; set; } // Fecha cuando el alumno confirmó
+        
+        // Multi-Tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
 
         // Campos de auditoría
         public DateTime FechaRegistro { get; set; }  // Equivalente a FechaCreacion

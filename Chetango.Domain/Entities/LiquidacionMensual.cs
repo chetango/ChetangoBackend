@@ -27,5 +27,9 @@ namespace Chetango.Domain.Entities
         public DateTime FechaCreacion { get; set; }
         public Guid CreadoPorIdUsuario { get; set; }
         public Usuario? CreadoPor { get; set; }
+
+        // Multi-tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
     }
 }

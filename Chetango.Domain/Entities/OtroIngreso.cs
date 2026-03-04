@@ -53,6 +53,10 @@ namespace Chetango.Domain.Entities
         public string UsuarioCreacion { get; set; } = null!;
         public string? UsuarioModificacion { get; set; }
 
+        // Multi-tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
         // Soft Delete
         public bool Eliminado { get; set; } = false;
         public DateTime? FechaEliminacion { get; set; }

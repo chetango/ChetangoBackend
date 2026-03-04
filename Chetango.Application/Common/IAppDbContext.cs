@@ -27,6 +27,12 @@ namespace Chetango.Application.Common
         DbSet<OtroIngreso> OtrosIngresos { get; }
         DbSet<OtroGasto> OtrosGastos { get; }
         
+        // Multi-tenancy y Suscripciones
+        DbSet<Tenant> Tenants { get; }
+        DbSet<TenantUser> TenantUsers { get; }
+        DbSet<PagoSuscripcion> PagosSuscripcion { get; }
+        DbSet<ConfiguracionPago> ConfiguracionPagos { get; }
+        
         // Método genérico para acceder a otros DbSets sin exponerlos explícitamente
         DbSet<TEntity> Set<TEntity>() where TEntity : class;
 

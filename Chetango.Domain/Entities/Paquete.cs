@@ -25,6 +25,10 @@ namespace Chetango.Domain.Entities.Estados
         public Guid IdTipoPaquete { get; set; }
         public TipoPaquete TipoPaquete { get; set; } = null!;
         public decimal ValorPaquete { get; set; }
+        
+        // Multi-Tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
 
         // Campos de auditoría
         public DateTime FechaCreacion { get; set; }
