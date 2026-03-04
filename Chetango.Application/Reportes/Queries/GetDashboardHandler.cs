@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Application.Reportes.DTOs;
 using Chetango.Domain.Enums;
 using MediatR;
@@ -11,11 +12,13 @@ namespace Chetango.Application.Reportes.Queries;
 public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<DashboardDTO>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
     private static readonly MemoryCache _cache = new(new MemoryCacheOptions());
 
-    public GetDashboardHandler(IAppDbContext db)
+    public GetDashboardHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<DashboardDTO>> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
@@ -23,8 +26,10 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
         // Calcular rango de fechas según parámetros
         var (fechaDesde, fechaHasta) = CalcularRangoFechas(request);
         
-        // Intentar obtener del cache
-        var cacheKey = $"dashboard_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}";
+        // IMPORTANTE: incluir TenantId en la clave del cache para que cada
+        // academia tenga su propia entrada (evita que se mezclen datos entre tenants)
+        var tenantId = _tenantProvider.GetCurrentTenantId()?.ToString() ?? "global";
+        var cacheKey = $"dashboard_{tenantId}_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}";
         
         if (_cache.TryGetValue(cacheKey, out DashboardDTO? cachedDashboard) && cachedDashboard != null)
         {
@@ -113,16 +118,13 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             .CountAsync(c => c.Fecha >= hoy && c.Fecha <= proximos7Dias, cancellationToken);
 
         var paquetesActivos = await _db.Paquetes
-            .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Activo", cancellationToken);
+            .CountAsync(p => p.IdEstado == 1, cancellationToken);
 
         var paquetesVencidos = await _db.Paquetes
-            .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Vencido", cancellationToken);
+            .CountAsync(p => p.IdEstado == 2, cancellationToken);
 
         var paquetesPorVencer = await _db.Paquetes
-            .Include(p => p.Estado)
-            .CountAsync(p => p.Estado.Nombre == "Activo" && p.FechaVencimiento <= proximos7Dias, cancellationToken);
+            .CountAsync(p => p.IdEstado == 1 && p.FechaVencimiento <= proximos7Dias, cancellationToken);
 
         // Paquetes agotados (IdEstado == 4 "Agotado")
         var paquetesAgotados = await _db.Paquetes

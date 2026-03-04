@@ -191,22 +191,23 @@ public class GetDashboardProfesorHandler : IRequestHandler<GetDashboardProfesorQ
         // ==========================================
         // 4. PRÓXIMAS CLASES (excluyendo hoy)
         // ==========================================
-        var proximasClases = await _db.Clases
-            .Include(c => c.TipoClase)
-            .Where(c => c.IdProfesorPrincipal == profesor.IdProfesor &&
-                       c.Fecha > hoy &&
-                       c.Fecha <= hoy.AddDays(7))
-            .OrderBy(c => c.Fecha)
-            .ThenBy(c => c.HoraInicio)
-            .Select(c => new ClaseProximaDTO
+        var proximasClases = await _db.ClasesProfesores
+            .Include(cp => cp.Clase)
+                .ThenInclude(c => c.TipoClase)
+            .Where(cp => cp.IdProfesor == profesor.IdProfesor &&
+                       cp.Clase.Fecha > hoy &&
+                       cp.Clase.Fecha <= hoy.AddDays(7))
+            .OrderBy(cp => cp.Clase.Fecha)
+            .ThenBy(cp => cp.Clase.HoraInicio)
+            .Select(cp => new ClaseProximaDTO
             {
-                IdClase = c.IdClase,
-                Fecha = c.Fecha,
-                HoraInicio = c.HoraInicio,
-                TipoClase = c.TipoClase.Nombre,
+                IdClase = cp.Clase.IdClase,
+                Fecha = cp.Clase.Fecha,
+                HoraInicio = cp.Clase.HoraInicio,
+                TipoClase = cp.Clase.TipoClase.Nombre,
                 NombreProfesor = profesor.Usuario.NombreUsuario,
-                CupoMaximo = c.CupoMaximo,
-                InscritosActual = c.Asistencias.Count
+                CupoMaximo = cp.Clase.CupoMaximo,
+                InscritosActual = cp.Clase.Asistencias.Count
             })
             .ToListAsync(cancellationToken);
 

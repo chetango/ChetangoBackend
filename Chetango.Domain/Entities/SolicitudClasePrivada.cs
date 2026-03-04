@@ -29,6 +29,10 @@ public class SolicitudClasePrivada
     
     public Guid? IdUsuarioRespondio { get; set; }
     
+    // Multi-Tenancy
+    public Guid? TenantId { get; set; }
+    public Tenant? Tenant { get; set; }
+    
     public string? MensajeRespuesta { get; set; }
     
     public Guid? IdClaseCreada { get; set; }

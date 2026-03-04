@@ -16,6 +16,10 @@ namespace Chetango.Domain.Entities
         public Guid IdMetodoPago { get; set; }
         public MetodoPago MetodoPago { get; set; } = null!;
         public string? Nota { get; set; }
+        
+        // Multi-Tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
 
         // Verificación de pagos
         public Guid IdEstadoPago { get; set; }

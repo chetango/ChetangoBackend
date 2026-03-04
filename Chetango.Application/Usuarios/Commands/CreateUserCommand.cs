@@ -3,6 +3,7 @@
 // ============================================
 
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
 using Chetango.Domain.Enums;
@@ -46,10 +47,12 @@ public record DatosAlumnoRequest(
 public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public CreateUserCommandHandler(IAppDbContext db)
+    public CreateUserCommandHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<Guid>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
@@ -105,6 +108,8 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
             return Result<Guid>.Failure("Estado Activo no encontrado");
 
         // 5. Crear el usuario
+        var tenantId = _tenantProvider.GetCurrentTenantId();
+
         var usuario = new Usuario
         {
             IdUsuario = Guid.NewGuid(),
@@ -115,10 +120,25 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
             NumeroDocumento = request.NumeroDocumento,
             IdEstadoUsuario = estadoActivo.Id,
             Sede = sedeAUsar.Value,
+            TenantId = tenantId,
             FechaCreacion = DateTimeHelper.Now
         };
 
         _db.Set<Usuario>().Add(usuario);
+
+        // 5b. Asociar usuario al tenant actual (hereda el tenant del admin que lo crea)
+        if (tenantId.HasValue)
+        {
+            var tenantUser = new TenantUser
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId.Value,
+                IdUsuario = usuario.IdUsuario,
+                FechaAsignacion = DateTimeHelper.Now,
+                Activo = true
+            };
+            _db.TenantUsers.Add(tenantUser);
+        }
 
         // 6. Crear registro según el rol
         switch (request.Rol.ToLower())
@@ -141,6 +161,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
                     Biografia = request.DatosProfesor.Biografia,
                     Especialidades = JsonSerializer.Serialize(request.DatosProfesor.Especialidades),
                     TarifaActual = request.DatosProfesor.TarifaActual,
+                    TenantId = tenantId,
                     NotificacionesEmail = true,
                     RecordatoriosClase = true,
                     AlertasCambios = true
@@ -164,7 +185,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
                     IdEstado = estadoAlumno.IdEstado,
                     ContactoEmergenciaNombre = request.DatosAlumno?.ContactoEmergencia,
                     ContactoEmergenciaTelefono = request.DatosAlumno?.TelefonoEmergencia,
-                    // ObservacionesMedicas se guardaría en una tabla adicional si existiera
+                    TenantId = tenantId,
                     NotificacionesEmail = true,
                     RecordatoriosClase = true,
                     AlertasPaquete = true

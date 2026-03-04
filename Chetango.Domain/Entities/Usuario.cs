@@ -16,6 +16,10 @@ namespace Chetango.Domain.Entities
         public int IdEstadoUsuario { get; set; } // FK explícita
         public EstadoUsuario Estado { get; set; } = null!;
         public Sede Sede { get; set; } = Sede.Medellin;
+
+        // Multi-tenancy
+        public Guid? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
         public DateTime FechaCreacion { get; set; }
 
         // Relaciones
