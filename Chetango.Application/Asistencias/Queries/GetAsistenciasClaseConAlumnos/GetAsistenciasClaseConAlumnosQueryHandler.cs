@@ -87,10 +87,10 @@ public class GetAsistenciasClaseConAlumnosQueryHandler
                     .FirstOrDefault();
             }
 
-            // Mapear estado de paquete
+            // Mapear estado de paquete (considera fecha de vencimiento además del estado en BD)
             string estadoPaquete = paquete is null
                 ? "SinPaquete"
-                : MapEstadoPaquete(paquete.Estado?.Nombre);
+                : MapEstadoPaquete(paquete.Estado?.Nombre, paquete.FechaVencimiento);
 
             int? clasesRestantes = paquete is null 
                 ? null 
@@ -122,18 +122,21 @@ public class GetAsistenciasClaseConAlumnosQueryHandler
         return Result<IReadOnlyList<AsistenciaProfesorDto>>.Success(resultadoOrdenado);
     }
 
-    private static string MapEstadoPaquete(string? nombreEstado)
+    private static string MapEstadoPaquete(string? nombreEstado, DateTime? fechaVencimiento = null)
     {
         if (string.IsNullOrWhiteSpace(nombreEstado))
-        {
             return "SinPaquete";
-        }
+
+        // Si el estado en BD es "Activo" pero la fecha ya venció, se considera Vencido
+        if (nombreEstado == "Activo" && fechaVencimiento.HasValue && fechaVencimiento.Value.Date < DateTime.Today)
+            return "Vencido";
 
         return nombreEstado switch
         {
             "Activo" => "Activo",
             "Agotado" => "Agotado",
             "Congelado" => "Congelado",
+            "Vencido" => "Vencido",
             _ => "SinPaquete"
         };
     }

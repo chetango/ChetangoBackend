@@ -104,10 +104,11 @@ public class GetPaquetesQueryHandler : IRequestHandler<GetPaquetesQuery, Result<
                 p.FechaActivacion,
                 p.FechaVencimiento,
                 p.ValorPaquete,
-                // Lógica de estado basada en IdEstado de la BD
-                p.IdEstado == 2 ? "Vencido" : 
-                p.IdEstado == 3 ? "Congelado" : 
-                p.IdEstado == 4 ? "Agotado" : 
+                // Estado efectivo: considera IdEstado, clases usadas y fecha de vencimiento
+                // Prioridad: Congelado > Agotado (clases agotadas) > Vencido (fecha) > Activo
+                p.IdEstado == 3 ? "Congelado" :
+                (p.IdEstado == 4 || p.ClasesUsadas >= p.ClasesDisponibles) ? "Agotado" :
+                (p.IdEstado == 2 || p.FechaVencimiento < DateTime.Today) ? "Vencido" :
                 "Activo",
                 p.FechaVencimiento < DateTime.Today,
                 (p.ClasesDisponibles - p.ClasesUsadas) > 0,
