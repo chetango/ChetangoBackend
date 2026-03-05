@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Application.Eventos.DTOs;
 using Chetango.Domain.Entities;
 using MediatR;
@@ -9,10 +10,12 @@ namespace Chetango.Application.Eventos.Commands;
 public class CreateEventoHandler : IRequestHandler<CreateEventoCommand, Result<EventoDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public CreateEventoHandler(IAppDbContext db)
+    public CreateEventoHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<EventoDto>> Handle(CreateEventoCommand request, CancellationToken cancellationToken)
@@ -37,7 +40,8 @@ public class CreateEventoHandler : IRequestHandler<CreateEventoCommand, Result<E
             ImagenUrl = request.ImagenUrl,
             Activo = true,
             FechaCreacion = DateTimeHelper.Now,
-            IdUsuarioCreador = request.IdUsuarioCreador
+            IdUsuarioCreador = request.IdUsuarioCreador,
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.Eventos.Add(evento);

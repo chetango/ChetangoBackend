@@ -1,10 +1,8 @@
 using Chetango.Application.Common;
-using Chetango.Application.Common.Interfaces;
 using Chetango.Application.Reportes.DTOs;
 using Chetango.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using System.Globalization;
 
 namespace Chetango.Application.Reportes.Queries;
@@ -12,35 +10,19 @@ namespace Chetango.Application.Reportes.Queries;
 public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<DashboardDTO>>
 {
     private readonly IAppDbContext _db;
-    private readonly ITenantProvider _tenantProvider;
-    private static readonly MemoryCache _cache = new(new MemoryCacheOptions());
 
-    public GetDashboardHandler(IAppDbContext db, ITenantProvider tenantProvider)
+    public GetDashboardHandler(IAppDbContext db)
     {
         _db = db;
-        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<DashboardDTO>> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
         // Calcular rango de fechas según parámetros
         var (fechaDesde, fechaHasta) = CalcularRangoFechas(request);
-        
-        // IMPORTANTE: incluir TenantId en la clave del cache para que cada
-        // academia tenga su propia entrada (evita que se mezclen datos entre tenants)
-        var tenantId = _tenantProvider.GetCurrentTenantId()?.ToString() ?? "global";
-        var cacheKey = $"dashboard_{tenantId}_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}";
-        
-        if (_cache.TryGetValue(cacheKey, out DashboardDTO? cachedDashboard) && cachedDashboard != null)
-        {
-            return Result<DashboardDTO>.Success(cachedDashboard);
-        }
 
-        // Generar dashboard
+        // Generar dashboard directamente desde BD (sin cache para datos siempre frescos)
         var dashboard = await GenerarDashboard(fechaDesde, fechaHasta, cancellationToken);
-
-        // Guardar en cache por 5 minutos
-        _cache.Set(cacheKey, dashboard, TimeSpan.FromMinutes(5));
 
         return Result<DashboardDTO>.Success(dashboard);
     }

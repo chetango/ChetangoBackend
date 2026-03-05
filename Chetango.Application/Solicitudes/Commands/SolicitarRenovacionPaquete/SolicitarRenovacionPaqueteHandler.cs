@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
 using MediatR;
@@ -9,10 +10,12 @@ namespace Chetango.Application.Solicitudes.Commands.SolicitarRenovacionPaquete;
 public class SolicitarRenovacionPaqueteHandler : IRequestHandler<SolicitarRenovacionPaqueteCommand, Result<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public SolicitarRenovacionPaqueteHandler(IAppDbContext db)
+    public SolicitarRenovacionPaqueteHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<Guid>> Handle(SolicitarRenovacionPaqueteCommand request, CancellationToken cancellationToken)
@@ -68,7 +71,8 @@ public class SolicitarRenovacionPaqueteHandler : IRequestHandler<SolicitarRenova
             TipoPaqueteDeseado = tipoPaqueteDeseado,
             MensajeAlumno = request.MensajeAlumno,
             Estado = "Pendiente",
-            FechaSolicitud = DateTime.Now
+            FechaSolicitud = DateTime.Now,
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.Set<SolicitudRenovacionPaquete>().Add(solicitud);

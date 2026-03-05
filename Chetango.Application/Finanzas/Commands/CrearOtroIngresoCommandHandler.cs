@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Application.Finanzas.DTOs;
 using Chetango.Domain.Entities;
 
@@ -9,10 +10,12 @@ namespace Chetango.Application.Finanzas.Commands;
 public class CrearOtroIngresoCommandHandler : IRequestHandler<CrearOtroIngresoCommand, Result<OtroIngresoDTO>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public CrearOtroIngresoCommandHandler(IAppDbContext db)
+    public CrearOtroIngresoCommandHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<OtroIngresoDTO>> Handle(CrearOtroIngresoCommand request, CancellationToken cancellationToken)
@@ -59,7 +62,8 @@ public class CrearOtroIngresoCommandHandler : IRequestHandler<CrearOtroIngresoCo
             Descripcion = request.Descripcion?.Trim(),
             UrlComprobante = request.UrlComprobante?.Trim(),
             FechaCreacion = DateTime.Now,
-            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema"
+            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema",
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.OtrosIngresos.Add(otroIngreso);

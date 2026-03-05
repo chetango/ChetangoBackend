@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
 using MediatR;
@@ -20,8 +21,13 @@ public record CrearPaqueteCommand(
 public class CrearPaqueteCommandHandler : IRequestHandler<CrearPaqueteCommand, Result<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public CrearPaqueteCommandHandler(IAppDbContext db) => _db = db;
+    public CrearPaqueteCommandHandler(IAppDbContext db, ITenantProvider tenantProvider)
+    {
+        _db = db;
+        _tenantProvider = tenantProvider;
+    }
 
     public async Task<Result<Guid>> Handle(CrearPaqueteCommand request, CancellationToken cancellationToken)
     {
@@ -72,7 +78,8 @@ public class CrearPaqueteCommandHandler : IRequestHandler<CrearPaqueteCommand, R
             IdEstado = 1, // 1 = Activo
             ValorPaquete = request.ValorPaquete,
             FechaCreacion = DateTime.Now,
-            UsuarioCreacion = "Sistema" // TODO: Obtener del contexto de usuario
+            UsuarioCreacion = "Sistema", // TODO: Obtener del contexto de usuario
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.Set<Paquete>().Add(paquete);

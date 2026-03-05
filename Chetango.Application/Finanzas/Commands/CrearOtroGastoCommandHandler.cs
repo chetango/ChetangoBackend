@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Application.Finanzas.DTOs;
 using Chetango.Domain.Entities;
 
@@ -9,10 +10,12 @@ namespace Chetango.Application.Finanzas.Commands;
 public class CrearOtroGastoCommandHandler : IRequestHandler<CrearOtroGastoCommand, Result<OtroGastoDTO>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public CrearOtroGastoCommandHandler(IAppDbContext db)
+    public CrearOtroGastoCommandHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<OtroGastoDTO>> Handle(CrearOtroGastoCommand request, CancellationToken cancellationToken)
@@ -61,7 +64,8 @@ public class CrearOtroGastoCommandHandler : IRequestHandler<CrearOtroGastoComman
             UrlFactura = request.UrlFactura?.Trim(),
             NumeroFactura = request.NumeroFactura?.Trim(),
             FechaCreacion = DateTime.Now,
-            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema"
+            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema",
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.OtrosGastos.Add(otroGasto);

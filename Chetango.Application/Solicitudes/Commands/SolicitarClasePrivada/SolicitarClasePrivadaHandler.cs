@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
 using MediatR;
@@ -9,10 +10,12 @@ namespace Chetango.Application.Solicitudes.Commands.SolicitarClasePrivada;
 public class SolicitarClasePrivadaHandler : IRequestHandler<SolicitarClasePrivadaCommand, Result<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public SolicitarClasePrivadaHandler(IAppDbContext db)
+    public SolicitarClasePrivadaHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<Guid>> Handle(SolicitarClasePrivadaCommand request, CancellationToken cancellationToken)
@@ -58,7 +61,8 @@ public class SolicitarClasePrivadaHandler : IRequestHandler<SolicitarClasePrivad
             HoraPreferida = request.HoraPreferida,
             ObservacionesAlumno = request.ObservacionesAlumno,
             Estado = "Pendiente",
-            FechaSolicitud = DateTime.Now
+            FechaSolicitud = DateTime.Now,
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.Set<SolicitudClasePrivada>().Add(solicitud);

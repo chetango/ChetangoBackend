@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Enums;
 using MediatR;
@@ -18,10 +19,12 @@ public record LiquidarMesCommand(
 public class LiquidarMesHandler : IRequestHandler<LiquidarMesCommand, Result<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public LiquidarMesHandler(IAppDbContext db)
+    public LiquidarMesHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<Guid>> Handle(LiquidarMesCommand request, CancellationToken cancellationToken)
@@ -107,7 +110,8 @@ public class LiquidarMesHandler : IRequestHandler<LiquidarMesCommand, Result<Gui
                 FechaCierre = DateTime.Now,
                 Observaciones = request.Observaciones,
                 FechaCreacion = DateTime.Now,
-                CreadoPorIdUsuario = request.CreadoPorIdUsuario
+                CreadoPorIdUsuario = request.CreadoPorIdUsuario,
+                TenantId = _tenantProvider.GetCurrentTenantId()
             };
 
             _db.Set<LiquidacionMensual>().Add(nuevaLiquidacion);

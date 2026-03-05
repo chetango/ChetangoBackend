@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
 using MediatR;
@@ -9,8 +10,13 @@ namespace Chetango.Application.Clases.Commands.CrearClase;
 public class CrearClaseCommandHandler : IRequestHandler<CrearClaseCommand, Result<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public CrearClaseCommandHandler(IAppDbContext db) => _db = db;
+    public CrearClaseCommandHandler(IAppDbContext db, ITenantProvider tenantProvider)
+    {
+        _db = db;
+        _tenantProvider = tenantProvider;
+    }
 
     public async Task<Result<Guid>> Handle(CrearClaseCommand request, CancellationToken cancellationToken)
     {
@@ -123,7 +129,8 @@ public class CrearClaseCommandHandler : IRequestHandler<CrearClaseCommand, Resul
             HoraInicio = request.HoraInicio,
             HoraFin = request.HoraFin,
             CupoMaximo = request.CupoMaximo,
-            Observaciones = request.Observaciones
+            Observaciones = request.Observaciones,
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.Set<Chetango.Domain.Entities.Clase>().Add(clase);
