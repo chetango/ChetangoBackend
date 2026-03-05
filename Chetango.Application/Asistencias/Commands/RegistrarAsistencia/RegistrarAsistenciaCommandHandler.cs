@@ -1,4 +1,5 @@
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Application.Paquetes.Commands.DescontarClase;
 using Chetango.Application.Paquetes.Queries.ValidarPaqueteDisponible;
 using Chetango.Domain.Entities;
@@ -12,11 +13,13 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
 {
     private readonly IAppDbContext _db;
     private readonly IMediator _mediator;
+    private readonly ITenantProvider _tenantProvider;
 
-    public RegistrarAsistenciaCommandHandler(IAppDbContext db, IMediator mediator)
+    public RegistrarAsistenciaCommandHandler(IAppDbContext db, IMediator mediator, ITenantProvider tenantProvider)
     {
         _db = db;
         _mediator = mediator;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<Guid>> Handle(RegistrarAsistenciaCommand request, CancellationToken cancellationToken)
@@ -136,7 +139,8 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
             IdTipoAsistencia = request.IdTipoAsistencia,
             IdPaqueteUsado = request.IdPaqueteUsado,
             IdEstado = request.IdEstadoAsistencia,
-            Observacion = observacionFinal
+            Observacion = observacionFinal,
+            TenantId = _tenantProvider.GetCurrentTenantId()
         };
 
         _db.Asistencias.Add(asistencia);
@@ -184,7 +188,8 @@ public class RegistrarAsistenciaCommandHandler : IRequestHandler<RegistrarAsiste
                         IdTipoAsistencia = request.IdTipoAsistencia,
                         IdPaqueteUsado = paqueteOtro.IdPaquete,
                         IdEstado = request.IdEstadoAsistencia,
-                        Observacion = observacionFinal + " [Paquete compartido]"
+                        Observacion = observacionFinal + " [Paquete compartido]",
+                        TenantId = _tenantProvider.GetCurrentTenantId()
                     };
 
                     _db.Asistencias.Add(asistenciaOtro);

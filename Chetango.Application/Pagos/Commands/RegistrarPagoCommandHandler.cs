@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Chetango.Application.Common;
+using Chetango.Application.Common.Interfaces;
 using Chetango.Application.Pagos.DTOs;
 using Chetango.Domain.Entities;
 using Chetango.Domain.Entities.Estados;
@@ -10,10 +11,12 @@ namespace Chetango.Application.Pagos.Commands;
 public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand, Result<RegistrarPagoResponseDTO>>
 {
     private readonly IAppDbContext _db;
+    private readonly ITenantProvider _tenantProvider;
 
-    public RegistrarPagoCommandHandler(IAppDbContext db)
+    public RegistrarPagoCommandHandler(IAppDbContext db, ITenantProvider tenantProvider)
     {
         _db = db;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<RegistrarPagoResponseDTO>> Handle(RegistrarPagoCommand request, CancellationToken cancellationToken)
@@ -144,7 +147,8 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
                 UrlComprobante = request.UrlComprobante,
                 Nota = request.Nota,
                 FechaCreacion = DateTimeHelper.Now,
-                UsuarioCreacion = "Sistema"
+                UsuarioCreacion = "Sistema",
+                TenantId = _tenantProvider.GetCurrentTenantId()
             };
 
             _db.Set<Pago>().Add(pago);
@@ -188,7 +192,8 @@ public class RegistrarPagoCommandHandler : IRequestHandler<RegistrarPagoCommand,
                         IdEstado = 1, // Activo
                         ValorPaquete = paqueteDTO.ValorPaquete ?? valorPorPaquetePorDefecto,
                         FechaCreacion = DateTimeHelper.Now,
-                        UsuarioCreacion = "Sistema"
+                        UsuarioCreacion = "Sistema",
+                        TenantId = _tenantProvider.GetCurrentTenantId()
                     };
 
                     _db.Set<Paquete>().Add(paquete);

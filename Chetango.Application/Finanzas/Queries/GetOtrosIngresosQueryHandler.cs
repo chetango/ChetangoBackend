@@ -18,6 +18,7 @@ public class GetOtrosIngresosQueryHandler : IRequestHandler<GetOtrosIngresosQuer
     {
         var query = _db.OtrosIngresos
             .Include(o => o.CategoriaIngreso)
+            .Where(o => !o.Eliminado)
             .AsQueryable();
 
         // Aplicar filtros

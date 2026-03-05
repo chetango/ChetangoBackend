@@ -18,6 +18,7 @@ public class GetOtrosGastosQueryHandler : IRequestHandler<GetOtrosGastosQuery, R
     {
         var query = _db.OtrosGastos
             .Include(o => o.CategoriaGasto)
+            .Where(o => !o.Eliminado)
             .AsQueryable();
 
         // Aplicar filtros
