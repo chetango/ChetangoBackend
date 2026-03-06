@@ -33,6 +33,11 @@ namespace Chetango.Application.Common
         DbSet<PagoSuscripcion> PagosSuscripcion { get; }
         DbSet<ConfiguracionPago> ConfiguracionPagos { get; }
 
+        // Cumplimiento legal y onboarding
+        DbSet<DocumentoLegal> DocumentosLegales { get; }
+        DbSet<VersionDocumentoLegal> VersionesDocumentoLegal { get; }
+        DbSet<AceptacionDocumento> AceptacionesDocumento { get; }
+
         // Configuración de sedes por tenant
         DbSet<SedeConfig> SedeConfigs { get; }
         

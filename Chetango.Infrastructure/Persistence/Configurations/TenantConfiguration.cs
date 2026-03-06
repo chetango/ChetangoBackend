@@ -90,6 +90,15 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(t => t.MetodoPagoPreferido)
             .HasMaxLength(50);
         
+        // Cumplimiento legal
+        builder.Property(t => t.OnboardingCompletado)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(t => t.RequiereReaceptacion)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         // Auditoría
         builder.Property(t => t.FechaCreacion)
             .IsRequired()
@@ -100,5 +109,11 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             
         builder.Property(t => t.ActualizadoPor)
             .HasMaxLength(256);
+
+        // Navegación
+        builder.HasMany(t => t.AceptacionesDocumentos)
+            .WithOne(a => a.Tenant)
+            .HasForeignKey(a => a.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

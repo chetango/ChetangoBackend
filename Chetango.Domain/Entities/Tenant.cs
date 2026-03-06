@@ -42,6 +42,22 @@ namespace Chetango.Domain.Entities
         public string? StripeCustomerId { get; set; }
         public string? MetodoPagoPreferido { get; set; } // Transferencia, Wompi, Stripe
         
+        // Cumplimiento y onboarding legal
+        /// <summary>
+        /// true cuando el admin aceptó todos los documentos obligatorios.
+        /// Mientras sea false, la academia está en modo lectura (onboarding pendiente).
+        /// </summary>
+        public bool OnboardingCompletado { get; set; } = false;
+
+        /// <summary>Fecha en que se completó el onboarding legal por primera vez</summary>
+        public DateTime? FechaActivacion { get; set; }
+
+        /// <summary>
+        /// true cuando existe una versión nueva de un documento crítico que el admin aún no aceptó.
+        /// El frontend muestra un banner de reaceptación obligatoria.
+        /// </summary>
+        public bool RequiereReaceptacion { get; set; } = false;
+
         // Auditoría
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaActualizacion { get; set; }
@@ -50,5 +66,6 @@ namespace Chetango.Domain.Entities
         
         // Relaciones
         public ICollection<PagoSuscripcion> PagosSuscripcion { get; set; } = new List<PagoSuscripcion>();
+        public ICollection<AceptacionDocumento> AceptacionesDocumentos { get; set; } = new List<AceptacionDocumento>();
     }
 }
