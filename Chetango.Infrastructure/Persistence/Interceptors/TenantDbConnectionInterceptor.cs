@@ -62,8 +62,9 @@ public class TenantDbConnectionInterceptor : DbConnectionInterceptor
             }
             catch (Exception ex)
             {
+                // No propagar: si sp_set_session_context falla el request debe continuar.
+                // RLS no filtrará por tenant en esta conexión, pero es preferible a un 500 sin CORS.
                 _logger.LogError(ex, "Error al configurar SESSION_CONTEXT con TenantId: {TenantId}", tenantId.Value);
-                throw;
             }
         }
         else if (!tenantId.HasValue)
@@ -90,8 +91,8 @@ public class TenantDbConnectionInterceptor : DbConnectionInterceptor
             }
             catch (Exception ex)
             {
+                // No propagar: si sp_set_session_context falla el request debe continuar.
                 _logger.LogError(ex, "Error al configurar SESSION_CONTEXT con TenantId: {TenantId}", tenantId.Value);
-                throw;
             }
         }
         else if (!tenantId.HasValue)

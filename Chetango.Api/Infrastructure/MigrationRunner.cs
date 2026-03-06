@@ -65,8 +65,9 @@ public static class MigrationRunner
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error applying migrations at startup");
-            throw; // Fail fast so we notice issues
+            // No re-lanzar: un error transitorio de conexión o de schema al arrancar
+            // no debe impedir que el app inicie. Revisar los logs para diagnosticar.
+            logger.LogError(ex, "Error applying migrations at startup — app will continue.");
         }
     }
 }
