@@ -81,86 +81,78 @@ namespace Chetango.Infrastructure.Persistence
             // IMPORTANTE: Las lambdas capturan la REFERENCIA a _tenantProvider (no el valor de tenantId).
             // EF Core evalúa estas lambdas en CADA query, así que GetCurrentTenantId() se llama
             // por request, no una sola vez al iniciar el servidor.
-            // Si tenantId es null → sin filtro (super admin o sin sesión).
-            // Si tenantId tiene valor → filtra estrictamente por ese tenant.
+            //
+            // Principio de seguridad por defecto (fail-secure):
+            //   - _tenantProvider == null     → Sin filtro (contexto de infraestructura: migraciones, seeds)
+            //   - TenantId presente           → Filtra estrictamente por ese tenant
+            //   - TenantId null (no resuelto) → Sin resultados (previene exposición de datos entre tenants)
+            //
+            // ⚠️  Para queries de super-admin que requieran ver todos los tenants, usar .IgnoreQueryFilters()
 
-            // Filtro para Clases
             modelBuilder.Entity<Clase>().HasQueryFilter(c =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                c.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 c.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Pagos
             modelBuilder.Entity<Pago>().HasQueryFilter(p =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                p.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 p.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Paquetes
             modelBuilder.Entity<Paquete>().HasQueryFilter(p =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                p.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 p.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Asistencias
             modelBuilder.Entity<Asistencia>().HasQueryFilter(a =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                a.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 a.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Eventos
             modelBuilder.Entity<Evento>().HasQueryFilter(e =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                e.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 e.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Solicitudes de Clase Privada
             modelBuilder.Entity<SolicitudClasePrivada>().HasQueryFilter(s =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                s.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 s.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Solicitudes de Renovación
             modelBuilder.Entity<SolicitudRenovacionPaquete>().HasQueryFilter(s =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                s.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 s.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Usuarios - Solo usuarios del tenant actual
             modelBuilder.Entity<Usuario>().HasQueryFilter(u =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                u.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 u.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Alumnos - Solo alumnos del tenant actual
             modelBuilder.Entity<Alumno>().HasQueryFilter(a =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                a.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 a.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para Profesores - Solo profesores del tenant actual
             modelBuilder.Entity<Profesor>().HasQueryFilter(p =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                p.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 p.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para OtrosIngresos - Solo ingresos del tenant actual
             modelBuilder.Entity<OtroIngreso>().HasQueryFilter(o =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                o.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 o.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para OtrosGastos - Solo gastos del tenant actual
             modelBuilder.Entity<OtroGasto>().HasQueryFilter(o =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                o.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 o.TenantId == _tenantProvider.GetCurrentTenantId()));
 
-            // Filtro para LiquidacionesMensuales - Solo liquidaciones del tenant actual
             modelBuilder.Entity<LiquidacionMensual>().HasQueryFilter(l =>
                 _tenantProvider == null ||
-                !_tenantProvider.GetCurrentTenantId().HasValue ||
-                l.TenantId == _tenantProvider.GetCurrentTenantId());
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 l.TenantId == _tenantProvider.GetCurrentTenantId()));
         }
     }
 }

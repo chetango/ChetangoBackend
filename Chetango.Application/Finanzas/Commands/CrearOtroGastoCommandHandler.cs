@@ -51,9 +51,11 @@ public class CrearOtroGastoCommandHandler : IRequestHandler<CrearOtroGastoComman
         }
 
         // Crear entidad
+        var tenantId = _tenantProvider.GetCurrentTenantId();
         var otroGasto = new OtroGasto
         {
             IdOtroGasto = Guid.NewGuid(),
+            TenantId = tenantId,
             Concepto = request.Concepto.Trim(),
             Monto = request.Monto,
             Fecha = request.Fecha,
@@ -64,8 +66,7 @@ public class CrearOtroGastoCommandHandler : IRequestHandler<CrearOtroGastoComman
             UrlFactura = request.UrlFactura?.Trim(),
             NumeroFactura = request.NumeroFactura?.Trim(),
             FechaCreacion = DateTime.Now,
-            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema",
-            TenantId = _tenantProvider.GetCurrentTenantId()
+            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema"
         };
 
         _db.OtrosGastos.Add(otroGasto);
