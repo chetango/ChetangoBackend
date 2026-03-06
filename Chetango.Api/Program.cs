@@ -216,10 +216,13 @@ async Task ProvisionUsuarioAsync(TokenValidatedContext ctx)
                 logger.LogInformation("Roles desde token para {Email}: {Roles}", email ?? "unknown", string.Join(", ", roleList));
         }
 
-        // Verificar usuario en BD y resolver TenantId para multi-tenancy
+        // Verificar usuario en BD y resolver TenantId para multi-tenancy.
+        // Se usa IgnoreQueryFilters() intencionalmente: en este punto el TenantId aún no está
+        // resuelto (es justamente lo que este bloque hace), por lo que el query filter
+        // fail-secure bloquearía la búsqueda y crearía un ciclo sin salida.
         var db = sp.GetRequiredService<ChetangoDbContext>();
         var usuario = !string.IsNullOrWhiteSpace(email)
-            ? await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Correo == email)
+            ? await db.Usuarios.AsNoTracking().IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Correo == email)
             : null;
 
         if (usuario != null)
