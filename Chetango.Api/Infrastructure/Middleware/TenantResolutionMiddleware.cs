@@ -42,7 +42,7 @@ public class TenantResolutionMiddleware
             }
 
             // Buscar tenant por subdomain
-            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            var connectionString = _configuration.GetConnectionString("ChetangoConnection");
             var tenantId = await GetTenantIdBySubdomainAsync(subdomain, connectionString);
 
             if (tenantId.HasValue)

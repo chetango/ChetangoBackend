@@ -56,7 +56,7 @@ namespace Chetango.Infrastructure.Services
                 connection.Open();
                 
                 // Buscar tenant existente por dominio
-                using var selectCommand = new SqlCommand("SELECT IdTenant FROM Tenants WHERE Dominio = @Dominio", connection);
+                using var selectCommand = new SqlCommand("SELECT Id FROM Tenants WHERE Dominio = @Dominio", connection);
                 selectCommand.Parameters.AddWithValue("@Dominio", domain);
                 
                 var result = selectCommand.ExecuteScalar();

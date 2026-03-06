@@ -8,8 +8,13 @@ using System.Data.Common;
 namespace Chetango.Infrastructure.Persistence.Interceptors;
 
 /// <summary>
-/// Interceptor que establece SESSION_CONTEXT con el TenantId antes de ejecutar cada comando SQL.
+/// Interceptor que establece SESSION_CONTEXT con el TenantId antes de abrir cada conexión SQL.
 /// Esto permite que Row-Level Security en SQL Server filtre automáticamente los datos.
+/// <para>
+/// Se usa <c>@read_only = 0</c> intencionalmente para que las conexiones reutilizadas del pool
+/// puedan actualizar el TenantId entre requests de distintos tenants. Con <c>@read_only = 1</c>
+/// la primera asignación sería permanente en la conexión, causando errores en escenarios multi-tenant.
+/// </para>
 /// </summary>
 public class TenantDbConnectionInterceptor : DbConnectionInterceptor
 {
@@ -48,7 +53,7 @@ public class TenantDbConnectionInterceptor : DbConnectionInterceptor
             try
             {
                 var command = sqlConnection.CreateCommand();
-                command.CommandText = "EXEC sp_set_session_context @key = N'TenantId', @value = @tenantId, @read_only = 1";
+                command.CommandText = "EXEC sp_set_session_context @key = N'TenantId', @value = @tenantId, @read_only = 0";
                 command.Parameters.Add(new SqlParameter("@tenantId", SqlDbType.UniqueIdentifier) { Value = tenantId.Value });
                 
                 await command.ExecuteNonQueryAsync(cancellationToken);
@@ -76,7 +81,7 @@ public class TenantDbConnectionInterceptor : DbConnectionInterceptor
             try
             {
                 var command = sqlConnection.CreateCommand();
-                command.CommandText = "EXEC sp_set_session_context @key = N'TenantId', @value = @tenantId, @read_only = 1";
+                command.CommandText = "EXEC sp_set_session_context @key = N'TenantId', @value = @tenantId, @read_only = 0";
                 command.Parameters.Add(new SqlParameter("@tenantId", SqlDbType.UniqueIdentifier) { Value = tenantId.Value });
                 
                 command.ExecuteNonQuery();

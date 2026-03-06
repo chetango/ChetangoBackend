@@ -51,9 +51,11 @@ public class CrearOtroIngresoCommandHandler : IRequestHandler<CrearOtroIngresoCo
         }
 
         // Crear entidad
+        var tenantId = _tenantProvider.GetCurrentTenantId();
         var otroIngreso = new OtroIngreso
         {
             IdOtroIngreso = Guid.NewGuid(),
+            TenantId = tenantId,
             Concepto = request.Concepto.Trim(),
             Monto = request.Monto,
             Fecha = request.Fecha,
@@ -62,8 +64,7 @@ public class CrearOtroIngresoCommandHandler : IRequestHandler<CrearOtroIngresoCo
             Descripcion = request.Descripcion?.Trim(),
             UrlComprobante = request.UrlComprobante?.Trim(),
             FechaCreacion = DateTime.Now,
-            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema",
-            TenantId = _tenantProvider.GetCurrentTenantId()
+            UsuarioCreacion = request.EmailUsuarioCreador ?? "Sistema"
         };
 
         _db.OtrosIngresos.Add(otroIngreso);
