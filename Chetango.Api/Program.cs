@@ -24,6 +24,7 @@ using Chetango.Application.Clases.Queries.GetClaseById;
 using Chetango.Application.Clases.Queries.GetClases;
 using Chetango.Application.Clases.Queries.GetClasesDeProfesor;
 using Chetango.Application.Clases.Queries.GetTiposClase;
+using Chetango.Application.Clases.Commands.CrearTipoClase;
 using Chetango.Application.Clases.Queries.GetProfesores;
 using Chetango.Application.Clases.Queries.GetAlumnos;
 using Chetango.Application.Clases.DTOs;
@@ -95,6 +96,10 @@ using Chetango.Application.Admin.Commands.CreateTenantWithAdmin;
 using Chetango.Application.Admin.Commands.AssignUserToTenant;
 using Chetango.Application.Suscripciones.Queries;
 using Chetango.Application.Suscripciones.Commands;
+using Chetango.Application.Sedes.Queries;                    // Sedes dinámicas por tenant
+using Chetango.Application.Sedes.Commands.CreateSede;         // Crear sede
+using Chetango.Application.Sedes.Commands.UpdateSede;         // Actualizar sede
+using Chetango.Application.Sedes.Commands.DeleteSede;         // Desactivar sede
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
@@ -564,6 +569,15 @@ app.MapGet("/api/tipos-clase", async (IMediator mediator) =>
     var result = await mediator.Send(new GetTiposClaseQuery());
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("ApiScope");
+
+// POST /api/tipos-clase - Crear un nuevo tipo de clase (solo Admin)
+app.MapPost("/api/tipos-clase", async (CrearTipoClaseCommand command, IMediator mediator) =>
+{
+    var result = await mediator.Send(command);
+    return result.Succeeded
+        ? Results.Created("/api/tipos-clase", new { id = result.Value })
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
 
 // GET /api/tipos-paquete - Obtener todos los tipos de paquete disponibles
 app.MapGet("/api/tipos-paquete", async (IMediator mediator) =>
@@ -1825,6 +1839,47 @@ app.MapGet("/api/reportes/alumnos", async (
     var result = await mediator.Send(query);
     return result.Succeeded 
         ? Results.Ok(result.Value) 
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/sedes - Sedes configuradas del tenant actual (AdminOnly)
+app.MapGet("/api/sedes", async (IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetSedesQuery());
+
+    return result.Succeeded
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// POST /api/sedes - Crear nueva sede (AdminOnly, sujeto a límite MaxSedes del plan)
+app.MapPost("/api/sedes", async (CreateSedeCommand command, IMediator mediator) =>
+{
+    var result = await mediator.Send(command);
+    return result.Succeeded
+        ? Results.Created("/api/sedes", result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// PUT /api/sedes/{id} - Actualizar nombre/orden de una sede (AdminOnly)
+app.MapPut("/api/sedes/{id:guid}", async (Guid id, UpdateSedeCommand command, IMediator mediator) =>
+{
+    var commandToSend = command.Id == Guid.Empty || command.Id != id
+        ? command with { Id = id }
+        : command;
+
+    var result = await mediator.Send(commandToSend);
+    return result.Succeeded
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { error = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// DELETE /api/sedes/{id} - Desactivar una sede (soft delete, AdminOnly)
+app.MapDelete("/api/sedes/{id:guid}", async (Guid id, IMediator mediator) =>
+{
+    var result = await mediator.Send(new DeleteSedeCommand(id));
+    return result.Succeeded
+        ? Results.Ok(new { eliminada = true })
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 

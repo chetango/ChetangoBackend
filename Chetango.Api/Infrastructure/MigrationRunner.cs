@@ -8,7 +8,7 @@ namespace Chetango.Api.Infrastructure;
 
 public static class MigrationRunner
 {
-    private const string QaProdTarget = "20250917211543_AlignSnapshot_SeedOID";
+    private const string QaProdTarget = "20260306053737_AgregarTenantIdATiposClaseYTipoPaquete";
 
     public static void Apply(WebApplication app)
     {

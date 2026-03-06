@@ -4,6 +4,7 @@ using Chetango.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Chetango.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ChetangoDbContext))]
-    partial class ChetangoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260306041112_AgregarSedeConfig")]
+    partial class AgregarSedeConfig
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1123,15 +1126,10 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Nombre")
-                        .IsUnique()
-                        .HasDatabaseName("IX_TiposClase_TenantId_Nombre")
-                        .HasFilter("[TenantId] IS NOT NULL");
+                    b.HasIndex("Nombre")
+                        .IsUnique();
 
                     b.ToTable("TiposClase", (string)null);
 
@@ -1225,15 +1223,10 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("TarifaProfesor")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Nombre")
-                        .IsUnique()
-                        .HasDatabaseName("IX_TiposPaquete_TenantId_Nombre")
-                        .HasFilter("[TenantId] IS NOT NULL");
+                    b.HasIndex("Nombre")
+                        .IsUnique();
 
                     b.ToTable("TiposPaquete", (string)null);
 

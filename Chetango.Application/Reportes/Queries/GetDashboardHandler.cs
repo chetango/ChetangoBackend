@@ -101,19 +101,35 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
         // Total de ingresos
         var ingresosEsteMes = ingresosAlumnosEsteMes + otrosIngresosEsteMes;
 
-        var ingresosMedellinEsteMes = await _db.Pagos
-            .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes && p.Sede == Sede.Medellin)
-            .SumAsync(p => p.MontoTotal, cancellationToken)
-            + await _db.OtrosIngresos
-            .Where(i => i.Fecha >= primerDiaMes && i.Fecha <= ultimoDiaMes && i.Sede == Sede.Medellin)
-            .SumAsync(i => i.Monto, cancellationToken);
+        // Cargar sedes activas del tenant para desglose dinámico (query filter aplica TenantId)
+        var sedesActivas = await _db.SedeConfigs
+            .Where(s => s.Activa)
+            .OrderBy(s => s.Orden)
+            .ToListAsync(cancellationToken);
 
-        var ingresosManizalesEsteMes = await _db.Pagos
-            .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes && p.Sede == Sede.Manizales)
-            .SumAsync(p => p.MontoTotal, cancellationToken)
-            + await _db.OtrosIngresos
-            .Where(i => i.Fecha >= primerDiaMes && i.Fecha <= ultimoDiaMes && i.Sede == Sede.Manizales)
-            .SumAsync(i => i.Monto, cancellationToken);
+        // Construir desglose de ingresos por sede (los egresos se completan más abajo)
+        var ingresosEgresosPorSede = new List<FinancialPorSedeDTO>();
+        foreach (var sede in sedesActivas)
+        {
+            var sedeEnum = (Sede)sede.SedeValor;
+            var ingresosSede = await _db.Pagos
+                .Where(p => p.FechaPago >= primerDiaMes && p.FechaPago <= ultimoDiaMes && p.Sede == sedeEnum)
+                .SumAsync(p => p.MontoTotal, cancellationToken)
+                + await _db.OtrosIngresos
+                .Where(i => i.Fecha >= primerDiaMes && i.Fecha <= ultimoDiaMes && i.Sede == sedeEnum)
+                .SumAsync(i => i.Monto, cancellationToken);
+
+            ingresosEgresosPorSede.Add(new FinancialPorSedeDTO
+            {
+                SedeValor  = sede.SedeValor,
+                NombreSede = sede.Nombre,
+                Ingresos   = ingresosSede
+            });
+        }
+
+        // Alias legacy para compatibilidad con el campo fijo del DTO (Chetango: 1=Medellín, 2=Manizales)
+        var ingresosMedellinEsteMes  = ingresosEgresosPorSede.FirstOrDefault(s => s.SedeValor == (int)Sede.Medellin)?.Ingresos  ?? 0;
+        var ingresosManizalesEsteMes = ingresosEgresosPorSede.FirstOrDefault(s => s.SedeValor == (int)Sede.Manizales)?.Ingresos ?? 0;
 
         var clasesProximos7Dias = await _db.Clases
             .CountAsync(c => c.Fecha >= hoy && c.Fecha <= proximos7Dias, cancellationToken);
@@ -131,13 +147,26 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
         var paquetesAgotados = await _db.Paquetes
             .CountAsync(p => p.IdEstado == 4, cancellationToken);
 
-        var paquetesAgotadosMedellin = await _db.Paquetes
-            .Include(p => p.Pago)
-            .CountAsync(p => p.IdEstado == 4 && p.Pago != null && p.Pago.Sede == Sede.Medellin, cancellationToken);
+        // Desglose dinámico de paquetes agotados por sede del tenant
+        var paquetesAgotadosPorSede = new List<PaquetesPorSedeDTO>();
+        foreach (var sede in sedesActivas)
+        {
+            var sedeEnum = (Sede)sede.SedeValor;
+            var agotados = await _db.Paquetes
+                .Include(p => p.Pago)
+                .CountAsync(p => p.IdEstado == 4 && p.Pago != null && p.Pago.Sede == sedeEnum, cancellationToken);
 
-        var paquetesAgotadosManizales = await _db.Paquetes
-            .Include(p => p.Pago)
-            .CountAsync(p => p.IdEstado == 4 && p.Pago != null && p.Pago.Sede == Sede.Manizales, cancellationToken);
+            paquetesAgotadosPorSede.Add(new PaquetesPorSedeDTO
+            {
+                SedeValor  = sede.SedeValor,
+                NombreSede = sede.Nombre,
+                Agotados   = agotados
+            });
+        }
+
+        // Alias legacy para compatibilidad con campos fijos del DTO
+        var paquetesAgotadosMedellin  = paquetesAgotadosPorSede.FirstOrDefault(s => s.SedeValor == (int)Sede.Medellin)?.Agotados  ?? 0;
+        var paquetesAgotadosManizales = paquetesAgotadosPorSede.FirstOrDefault(s => s.SedeValor == (int)Sede.Manizales)?.Agotados ?? 0;
 
         // Contar asistencias registradas hoy con estado "Presente"
         var asistenciasHoy = await _db.Asistencias
@@ -204,19 +233,21 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
 
         var egresosEsteMes = egresosNominaEsteMes + otrosGastosEsteMes;
 
-        var egresosMedellinEsteMes = await _db.LiquidacionesMensuales
-            .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes && l.Sede == Sede.Medellin)
-            .SumAsync(l => l.TotalPagar, cancellationToken)
-            + await _db.OtrosGastos
-            .Where(g => g.Fecha >= primerDiaMes && g.Fecha <= ultimoDiaMes && g.Sede == Sede.Medellin)
-            .SumAsync(g => g.Monto, cancellationToken);
+        // Completar el desglose de egresos por sede (ingresos ya cargados en el loop anterior)
+        foreach (var item in ingresosEgresosPorSede)
+        {
+            var sedeEnum = (Sede)item.SedeValor;
+            item.Egresos = await _db.LiquidacionesMensuales
+                .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes && l.Sede == sedeEnum)
+                .SumAsync(l => l.TotalPagar, cancellationToken)
+                + await _db.OtrosGastos
+                .Where(g => g.Fecha >= primerDiaMes && g.Fecha <= ultimoDiaMes && g.Sede == sedeEnum)
+                .SumAsync(g => g.Monto, cancellationToken);
+        }
 
-        var egresosManizalesEsteMes = await _db.LiquidacionesMensuales
-            .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaMes && l.FechaPago <= ultimoDiaMes && l.Sede == Sede.Manizales)
-            .SumAsync(l => l.TotalPagar, cancellationToken)
-            + await _db.OtrosGastos
-            .Where(g => g.Fecha >= primerDiaMes && g.Fecha <= ultimoDiaMes && g.Sede == Sede.Manizales)
-            .SumAsync(g => g.Monto, cancellationToken);
+        // Alias legacy para compatibilidad con campos fijos del DTO
+        var egresosMedellinEsteMes  = ingresosEgresosPorSede.FirstOrDefault(s => s.SedeValor == (int)Sede.Medellin)?.Egresos  ?? 0;
+        var egresosManizalesEsteMes = ingresosEgresosPorSede.FirstOrDefault(s => s.SedeValor == (int)Sede.Manizales)?.Egresos ?? 0;
 
         var egresosPeriodoAnterior = await _db.LiquidacionesMensuales
             .Where(l => l.Estado == "Pagada" && l.FechaPago >= primerDiaPeriodoAnterior && l.FechaPago <= ultimoDiaPeriodoAnterior)
@@ -259,6 +290,8 @@ public class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Result<Das
             EgresosMedellinEsteMes = egresosMedellinEsteMes,
             EgresosManizalesEsteMes = egresosManizalesEsteMes,
             GananciaNeta = gananciaNeta,
+            IngresosEgresosPorSede = ingresosEgresosPorSede,
+            PaquetesAgotadosPorSede = paquetesAgotadosPorSede,
             CrecimientoIngresosMesAnterior = crecimientoIngresos.HasValue ? Math.Round(crecimientoIngresos.Value, 2) : null,
             ComparativaAsistenciasMesAnterior = comparativaAsistencias.HasValue ? Math.Round(comparativaAsistencias.Value, 2) : null,
             ComparativaAlumnosMesAnterior = comparativaAlumnos.HasValue ? Math.Round(comparativaAlumnos.Value, 2) : null,

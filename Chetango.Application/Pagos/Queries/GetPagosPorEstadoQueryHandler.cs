@@ -38,28 +38,54 @@ public class GetPagosPorEstadoQueryHandler : IRequestHandler<GetPagosPorEstadoQu
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
+        // Cargar sedes del tenant para resolver nombres dinámicamente (query filter aplica TenantId)
+        var sedeConfigs = await _db.SedeConfigs.AsNoTracking().ToListAsync(cancellationToken);
+        string ResolverNombreSede(Domain.Enums.Sede sede)
+        {
+            var config = sedeConfigs.FirstOrDefault(s => s.SedeValor == (int)sede);
+            return config?.Nombre ?? (sede == Domain.Enums.Sede.Medellin ? "Medellín" : "Manizales");
+        }
+
+        var rawItems = await query
             .OrderByDescending(p => p.FechaPago)
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(p => new PagoDTO(
+            .Select(p => new
+            {
                 p.IdPago,
-                p.IdAlumno ?? Guid.Empty,
+                p.IdAlumno,
                 p.FechaPago,
                 p.MontoTotal,
-                p.MetodoPago.Nombre,
-                p.Alumno.Usuario.NombreUsuario,
-                p.EstadoPago.Nombre,
+                MetodoPagoNombre = p.MetodoPago.Nombre,
+                NombreAlumno = p.Alumno.Usuario.NombreUsuario,
+                EstadoPagoNombre = p.EstadoPago.Nombre,
                 p.UrlComprobante,
                 p.ReferenciaTransferencia,
                 p.NotasVerificacion,
                 p.FechaVerificacion,
                 p.UsuarioVerificacion,
-                p.Paquetes.Count,
-                p.Sede,
-                p.Sede == Domain.Enums.Sede.Medellin ? "Medellín" : "Manizales"
-            ))
+                CantidadPaquetes = p.Paquetes.Count,
+                p.Sede
+            })
             .ToListAsync(cancellationToken);
+
+        var items = rawItems.Select(p => new PagoDTO(
+            p.IdPago,
+            p.IdAlumno ?? Guid.Empty,
+            p.FechaPago,
+            p.MontoTotal,
+            p.MetodoPagoNombre,
+            p.NombreAlumno,
+            p.EstadoPagoNombre,
+            p.UrlComprobante,
+            p.ReferenciaTransferencia,
+            p.NotasVerificacion,
+            p.FechaVerificacion,
+            p.UsuarioVerificacion,
+            p.CantidadPaquetes,
+            p.Sede,
+            ResolverNombreSede(p.Sede)
+        )).ToList();
 
         var result = new PaginatedList<PagoDTO>
         {

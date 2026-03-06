@@ -79,7 +79,19 @@ public class DashboardKPIsDTO
     public decimal EgresosManizalesEsteMes { get; set; }
     
     public decimal GananciaNeta { get; set; }
-    
+
+    /// <summary>
+    /// Desglose dinámico de ingresos y egresos por sede del tenant.
+    /// Reemplaza las propiedades hardcodeadas IngresosMedellinEsteMes / IngresosManizalesEsteMes
+    /// para soportar cualquier número de sedes (multi-tenant genérico).
+    /// </summary>
+    public List<FinancialPorSedeDTO> IngresosEgresosPorSede { get; set; } = new();
+
+    /// <summary>
+    /// Desglose dinámico de paquetes agotados por sede del tenant.
+    /// </summary>
+    public List<PaquetesPorSedeDTO> PaquetesAgotadosPorSede { get; set; } = new();
+
     /// <summary>
     /// Comparativas con periodo anterior (% de cambio)
     /// </summary>
@@ -158,4 +170,42 @@ public class UltimoPagoDTO
     public string MetodoPago { get; set; } = string.Empty;
     public string NombrePaquete { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Ingresos y egresos de una sede específica del tenant.
+/// Usado en IngresosEgresosPorSede del dashboard para eliminar propiedades hardcodeadas.
+/// </summary>
+public class FinancialPorSedeDTO
+{
+    /// <summary>Valor numérico de la sede (discriminador en tablas de negocio).</summary>
+    public int SedeValor { get; set; }
+
+    /// <summary>Nombre visible de la sede (ej: "Medellín", "Principal").</summary>
+    public string NombreSede { get; set; } = string.Empty;
+
+    /// <summary>Total de ingresos de la sede en el periodo.</summary>
+    public decimal Ingresos { get; set; }
+
+    /// <summary>Total de egresos de la sede en el periodo.</summary>
+    public decimal Egresos { get; set; }
+
+    /// <summary>Ganancia neta de la sede en el periodo (Ingresos - Egresos).</summary>
+    public decimal Ganancia => Ingresos - Egresos;
+}
+
+/// <summary>
+/// Paquetes agotados de una sede específica del tenant.
+/// Usado en PaquetesAgotadosPorSede del dashboard para eliminar propiedades hardcodeadas.
+/// </summary>
+public class PaquetesPorSedeDTO
+{
+    /// <summary>Valor numérico de la sede.</summary>
+    public int SedeValor { get; set; }
+
+    /// <summary>Nombre visible de la sede.</summary>
+    public string NombreSede { get; set; } = string.Empty;
+
+    /// <summary>Cantidad de paquetes agotados (IdEstado==4) de la sede.</summary>
+    public int Agotados { get; set; }
 }
