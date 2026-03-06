@@ -139,15 +139,32 @@ builder.Services.AddScoped<ITenantProvider, TenantProvider>(); // Scoped = por r
 builder.Services.AddScoped<ITenantService, TenantService>(); // Mantener para compatibilidad
 
 // CORS por entorno
+// Soporta:
+//   - Orígenes exactos definidos en appsettings (Cors:AllowedOrigins)
+//   - Todos los subdominios de *.aphellion.com (multi-tenant: nuevas academias)
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCors", policy =>
     {
-        if (allowedOrigins.Length > 0)
-            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-        else
-            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        policy
+            .SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrEmpty(origin)) return false;
+
+                // Permitir todos los subdominios de aphellion.com (multi-tenant)
+                if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                {
+                    if (uri.Host.EndsWith(".aphellion.com", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+
+                // Permitir orígenes explícitos del appsettings
+                return allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
