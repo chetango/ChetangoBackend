@@ -48,6 +48,9 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<PagoSuscripcion> PagosSuscripcion => Set<PagoSuscripcion>();
         public DbSet<ConfiguracionPago> ConfiguracionPagos => Set<ConfiguracionPago>();
 
+        // Configuración de sedes por tenant
+        public DbSet<SedeConfig> SedeConfigs => Set<SedeConfig>();
+
         // Estados y tipos
         public DbSet<EstadoAlumno> EstadosAlumno => Set<EstadoAlumno>();
         public DbSet<EstadoAsistencia> EstadosAsistencia => Set<EstadoAsistencia>();
@@ -153,6 +156,23 @@ namespace Chetango.Infrastructure.Persistence
                 _tenantProvider == null ||
                 (_tenantProvider.GetCurrentTenantId().HasValue &&
                  l.TenantId == _tenantProvider.GetCurrentTenantId()));
+
+            modelBuilder.Entity<SedeConfig>().HasQueryFilter(s =>
+                _tenantProvider == null ||
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 s.TenantId == _tenantProvider.GetCurrentTenantId()));
+
+            // TiposClase y TiposPaquete son por tenant.
+            // Filas con TenantId = NULL son seeds legacy globales → invisibles a todos los tenants.
+            modelBuilder.Entity<TipoClase>().HasQueryFilter(tc =>
+                _tenantProvider == null ||
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 tc.TenantId == _tenantProvider.GetCurrentTenantId()));
+
+            modelBuilder.Entity<TipoPaquete>().HasQueryFilter(tp =>
+                _tenantProvider == null ||
+                (_tenantProvider.GetCurrentTenantId().HasValue &&
+                 tp.TenantId == _tenantProvider.GetCurrentTenantId()));
         }
     }
 }

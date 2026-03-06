@@ -3,6 +3,13 @@ namespace Chetango.Domain.Entities.Estados
     public class TipoPaquete
     {
         public Guid Id { get; set; }
+
+        /// <summary>
+        /// Tenant propietario de este tipo de paquete.
+        /// NULL solo en registros de seed globales legacy (no visibles a ningún tenant).
+        /// </summary>
+        public Guid? TenantId { get; set; }
+
         public string Nombre { get; set; } = null!;
         public int NumeroClases { get; set; }
         public decimal Precio { get; set; }

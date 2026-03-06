@@ -87,6 +87,19 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<Usuari
             .Take(request.PageSize)
             .ToListAsync(cancellationToken);
 
+        // Cargar SedeConfigs del tenant para resolver nombres de sede
+        var sedeConfigs = await _db.SedeConfigs
+            .Where(s => s.Activa)
+            .ToListAsync(cancellationToken);
+
+        string ResolverNombreSede(Domain.Enums.Sede sede)
+        {
+            var config = sedeConfigs.FirstOrDefault(s => s.SedeValor == (int)sede);
+            if (config != null) return config.Nombre;
+            // Fallback si no hay SedeConfig configurado (tenant sin sedes dinámicas)
+            return sede == Domain.Enums.Sede.Medellin ? "Medellín" : "Manizales";
+        }
+
         // Mapear a DTOs
         var usuariosDTO = usuarios.Select(u => new UsuarioDTO
         {
@@ -99,6 +112,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<Usuari
             Rol = DeterminarRol(u),
             Estado = u.Estado.Nombre,
             Sede = u.Sede,
+            SedeNombre = ResolverNombreSede(u.Sede),
             FechaCreacion = u.FechaCreacion
         }).ToList();
 

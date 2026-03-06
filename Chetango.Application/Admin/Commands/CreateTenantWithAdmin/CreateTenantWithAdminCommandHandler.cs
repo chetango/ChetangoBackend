@@ -1,5 +1,6 @@
 using Chetango.Application.Common;
 using Chetango.Domain.Entities;
+using Chetango.Domain.Entities.Estados;
 using Chetango.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -120,7 +121,56 @@ public class CreateTenantWithAdminCommandHandler : IRequestHandler<CreateTenantW
         }
 
         // ===================================================================
-        // 5. RETORNAR RESULTADO
+        // 5. CREAR SEDE PREDETERMINADA "PRINCIPAL" PARA EL NUEVO TENANT
+        //    Cada academia comienza con una sola sede genérica.
+        //    Si el tenant necesita más sedes, se agregan desde el panel de administración.
+        // ===================================================================
+        var existeSedeDefault = await _context.SedeConfigs
+            .AnyAsync(s => s.TenantId == tenant.Id, cancellationToken);
+
+        if (!existeSedeDefault)
+        {
+            var sedeDefault = new SedeConfig
+            {
+                Id          = Guid.NewGuid(),
+                TenantId    = tenant.Id,
+                SedeValor   = (int)Sede.Medellin, // valor 1, reutiliza el slot del enum
+                Nombre      = "Principal",
+                Activa      = true,
+                EsDefault   = true,
+                Orden       = 1,
+                FechaCreacion = DateTime.UtcNow
+            };
+
+            _context.SedeConfigs.Add(sedeDefault);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Sede predeterminada creada para tenant: {TenantId}", tenant.Id);
+        }
+
+        // ===================================================================
+        // 6. CREAR TIPOS DE CLASE BASE PARA EL NUEVO TENANT
+        //    Cada academia empieza con tipos genéricos que puede renombrar o
+        //    ampliar desde la configuración de la plataforma.
+        // ===================================================================
+        var tieneTiposClase = await _context.Set<TipoClase>()
+            .AnyAsync(tc => tc.TenantId == tenant.Id, cancellationToken);
+
+        if (!tieneTiposClase)
+        {
+            var tiposClaseDefault = new[]
+            {
+                new TipoClase { Id = Guid.NewGuid(), TenantId = tenant.Id, Nombre = "General"  },
+                new TipoClase { Id = Guid.NewGuid(), TenantId = tenant.Id, Nombre = "Privada"  },
+                new TipoClase { Id = Guid.NewGuid(), TenantId = tenant.Id, Nombre = "Taller"   },
+                new TipoClase { Id = Guid.NewGuid(), TenantId = tenant.Id, Nombre = "Evento"   },
+            };
+            _context.Set<TipoClase>().AddRange(tiposClaseDefault);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        // ===================================================================
+        // 7. RETORNAR RESULTADO
         // ===================================================================
         return new CreateTenantWithAdminResponse
         {

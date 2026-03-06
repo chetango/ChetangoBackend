@@ -28,7 +28,18 @@ public class TipoClaseConfiguration : IEntityTypeConfiguration<TipoClase>
         builder.ToTable("TiposClase");
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Nombre).IsRequired().HasMaxLength(100);
-        builder.HasIndex(t => t.Nombre).IsUnique();
+        builder.Property(t => t.TenantId).IsRequired(false);
+
+        // El índice único es POR TENANT para que dos academias puedan
+        // tener tipos con el mismo nombre sin colisionar.
+        // Los registros con TenantId = NULL (seeds legacy) quedan excluidos del índice.
+        builder.HasIndex(t => new { t.TenantId, t.Nombre })
+            .IsUnique()
+            .HasFilter("[TenantId] IS NOT NULL")
+            .HasDatabaseName("IX_TiposClase_TenantId_Nombre");
+
+        // Seeds globales legacy — TenantId = NULL, invisibles a todos los tenants.
+        // Se conservan para no romper migraciones anteriores.
         builder.HasData(
             new TipoClase { Id = Guid.Parse("44444444-4444-4444-4444-444444444444"), Nombre = "Regular" },
             new TipoClase { Id = Guid.Parse("55555555-5555-5555-5555-555555555555"), Nombre = "Taller" },
@@ -46,11 +57,19 @@ public class TipoPaqueteConfiguration : IEntityTypeConfiguration<TipoPaquete>
         builder.Property(t => t.Nombre).IsRequired().HasMaxLength(100);
         builder.Property(t => t.Precio).HasColumnType("decimal(18,2)");
         builder.Property(t => t.Activo).HasDefaultValue(true);
-        builder.HasIndex(t => t.Nombre).IsUnique();
+        builder.Property(t => t.TenantId).IsRequired(false);
+
+        // Índice único por tenant (igual que TiposClase).
+        builder.HasIndex(t => new { t.TenantId, t.Nombre })
+            .IsUnique()
+            .HasFilter("[TenantId] IS NOT NULL")
+            .HasDatabaseName("IX_TiposPaquete_TenantId_Nombre");
+
+        // Seeds globales legacy — TenantId = NULL, invisibles a todos los tenants.
         builder.HasData(
-            new TipoPaquete { Id = Guid.Parse("77777777-7777-7777-7777-777777777777"), Nombre = "Mensual", NumeroClases = 0, Precio = 0, DiasVigencia = 30, Activo = true },
-            new TipoPaquete { Id = Guid.Parse("88888888-8888-8888-8888-888888888888"), Nombre = "BonoClases", NumeroClases = 0, Precio = 0, DiasVigencia = 0, Activo = true },
-            new TipoPaquete { Id = Guid.Parse("99999999-9999-9999-9999-999999999999"), Nombre = "Ilimitado", NumeroClases = 0, Precio = 0, DiasVigencia = 30, Activo = true }
+            new TipoPaquete { Id = Guid.Parse("77777777-7777-7777-7777-777777777777"), Nombre = "Mensual",    NumeroClases = 0, Precio = 0, DiasVigencia = 30, Activo = true },
+            new TipoPaquete { Id = Guid.Parse("88888888-8888-8888-8888-888888888888"), Nombre = "BonoClases", NumeroClases = 0, Precio = 0, DiasVigencia = 0,  Activo = true },
+            new TipoPaquete { Id = Guid.Parse("99999999-9999-9999-9999-999999999999"), Nombre = "Ilimitado",  NumeroClases = 0, Precio = 0, DiasVigencia = 30, Activo = true }
         );
     }
 }

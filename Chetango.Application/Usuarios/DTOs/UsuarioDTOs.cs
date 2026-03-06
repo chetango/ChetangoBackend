@@ -35,9 +35,10 @@ public class UsuarioDTO
     
     [JsonPropertyName("sede")]
     public Sede Sede { get; set; }
-    
+
+    /// <summary>Nombre legible de la sede, resuelto desde SedeConfig del tenant.</summary>
     [JsonPropertyName("sedeNombre")]
-    public string SedeNombre => Sede == Sede.Medellin ? "Medellín" : "Manizales";
+    public string SedeNombre { get; set; } = string.Empty;
     
     [JsonPropertyName("fechaCreacion")]
     public DateTime FechaCreacion { get; set; }
@@ -74,9 +75,10 @@ public class UsuarioDetalleDTO
     
     [JsonPropertyName("sede")]
     public Sede Sede { get; set; }
-    
+
+    /// <summary>Nombre legible de la sede, resuelto desde SedeConfig del tenant.</summary>
     [JsonPropertyName("sedeNombre")]
-    public string SedeNombre => Sede == Sede.Medellin ? "Medellín" : "Manizales";
+    public string SedeNombre { get; set; } = string.Empty;
     
     [JsonPropertyName("fechaCreacion")]
     public DateTime FechaCreacion { get; set; }

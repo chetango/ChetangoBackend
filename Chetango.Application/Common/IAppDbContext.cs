@@ -32,6 +32,9 @@ namespace Chetango.Application.Common
         DbSet<TenantUser> TenantUsers { get; }
         DbSet<PagoSuscripcion> PagosSuscripcion { get; }
         DbSet<ConfiguracionPago> ConfiguracionPagos { get; }
+
+        // Configuración de sedes por tenant
+        DbSet<SedeConfig> SedeConfigs { get; }
         
         // Método genérico para acceder a otros DbSets sin exponerlos explícitamente
         DbSet<TEntity> Set<TEntity>() where TEntity : class;
