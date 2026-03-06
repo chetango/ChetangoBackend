@@ -100,6 +100,8 @@ using Chetango.Application.Sedes.Queries;                    // Sedes dinámicas
 using Chetango.Application.Sedes.Commands.CreateSede;         // Crear sede
 using Chetango.Application.Sedes.Commands.UpdateSede;         // Actualizar sede
 using Chetango.Application.Sedes.Commands.DeleteSede;         // Desactivar sede
+using Chetango.Application.Compliance.Commands;               // Compliance/Onboarding legal
+using Chetango.Application.Compliance.Queries;
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
@@ -3577,4 +3579,94 @@ app.MapPost("/api/suscripciones/admin/rechazar/{pagoId}", async (
         return Results.BadRequest(new { success = false, message = result.Error });
 }).RequireAuthorization("AdminOnly"); // TODO: Cambiar a "SuperAdminOnly"
 
+// ====================================================================================================
+// === COMPLIANCE / ONBOARDING LEGAL ===
+// ====================================================================================================
+
+// GET /api/compliance/estado - Estado de cumplimiento del tenant actual (Admin)
+app.MapGet("/api/compliance/estado", async (
+    ITenantProvider tenantProvider,
+    IMediator mediator) =>
+{
+    var tenantId = tenantProvider.GetCurrentTenantId();
+    if (tenantId is null)
+        return Results.BadRequest(new { success = false, message = "No se pudo identificar el tenant." });
+
+    var result = await mediator.Send(new Chetango.Application.Compliance.Queries.GetEstadoCumplimientoQuery(tenantId.Value));
+    return result.Succeeded
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { success = false, message = result.Error });
+}).RequireAuthorization("ApiScope"); // Admin y profesor pueden consultar (el guard de onboarding lo necesita)
+
+// POST /api/compliance/aceptar - Aceptar uno o más documentos legales (Admin)
+app.MapPost("/api/compliance/aceptar", async (
+    ITenantProvider tenantProvider,
+    HttpContext httpContext,
+    ChetangoDbContext db,
+    IMediator mediator) =>
+{
+    var tenantId = tenantProvider.GetCurrentTenantId();
+    if (tenantId is null)
+        return Results.BadRequest(new { success = false, message = "No se pudo identificar el tenant." });
+
+    // Extraer email del token para obtener el idUsuario
+    var email = httpContext.User.FindFirst(ClaimTypes.Email)?.Value
+             ?? httpContext.User.FindFirst("preferred_username")?.Value
+             ?? httpContext.User.FindFirst("emails")?.Value;
+    email = string.IsNullOrWhiteSpace(email) ? email : email?.Trim();
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios
+        .AsNoTracking()
+        .FirstOrDefaultAsync(u => u.Correo == email);
+
+    if (usuario is null)
+        return Results.NotFound(new { success = false, message = "Usuario no encontrado." });
+
+    var body = await httpContext.Request.ReadFromJsonAsync<AceptarDocumentosRequest>();
+    if (body is null || body.VersionesDocumentoLegalIds is null || body.VersionesDocumentoLegalIds.Count == 0)
+        return Results.BadRequest(new { success = false, message = "Debe indicar las versiones de documentos a aceptar." });
+
+    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+    var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+
+    var command = new Chetango.Application.Compliance.Commands.AceptarDocumentosCommand(
+        TenantId: tenantId.Value,
+        IdUsuario: usuario.IdUsuario,
+        VersionesDocumentoLegalIds: body.VersionesDocumentoLegalIds,
+        IpOrigen: ip,
+        UserAgent: userAgent,
+        Contexto: body.Contexto ?? "Onboarding");
+
+    var result = await mediator.Send(command);
+    return result.Succeeded
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { success = false, message = result.Error });
+}).RequireAuthorization("AdminOnly");
+
+// GET /api/compliance/historial - Historial de aceptaciones del tenant (Admin)
+app.MapGet("/api/compliance/historial", async (
+    ITenantProvider tenantProvider,
+    IMediator mediator) =>
+{
+    var tenantId = tenantProvider.GetCurrentTenantId();
+    if (tenantId is null)
+        return Results.BadRequest(new { success = false, message = "No se pudo identificar el tenant." });
+
+    var result = await mediator.Send(new Chetango.Application.Compliance.Queries.GetHistorialAceptacionesQuery(tenantId.Value));
+    return result.Succeeded
+        ? Results.Ok(result.Value)
+        : Results.BadRequest(new { success = false, message = result.Error });
+}).RequireAuthorization("AdminOnly");
+
 app.Run();
+
+// ============================================================
+// Request DTOs for Compliance endpoints
+// ============================================================
+public record AceptarDocumentosRequest(
+    List<Guid> VersionesDocumentoLegalIds,
+    string? Contexto
+);

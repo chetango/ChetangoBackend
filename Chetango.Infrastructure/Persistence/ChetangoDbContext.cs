@@ -48,6 +48,11 @@ namespace Chetango.Infrastructure.Persistence
         public DbSet<PagoSuscripcion> PagosSuscripcion => Set<PagoSuscripcion>();
         public DbSet<ConfiguracionPago> ConfiguracionPagos => Set<ConfiguracionPago>();
 
+        // Cumplimiento legal y onboarding
+        public DbSet<DocumentoLegal> DocumentosLegales => Set<DocumentoLegal>();
+        public DbSet<VersionDocumentoLegal> VersionesDocumentoLegal => Set<VersionDocumentoLegal>();
+        public DbSet<AceptacionDocumento> AceptacionesDocumento => Set<AceptacionDocumento>();
+
         // Configuración de sedes por tenant
         public DbSet<SedeConfig> SedeConfigs => Set<SedeConfig>();
 

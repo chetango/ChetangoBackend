@@ -4,6 +4,7 @@ using Chetango.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Chetango.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ChetangoDbContext))]
-    partial class ChetangoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260306204346_AgregarModuloCompliance")]
+    partial class AgregarModuloCompliance
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2595,7 +2598,7 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                             FechaVigencia = new DateTime(2026, 3, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             NumeroVersion = "1.0",
                             ResumenCambios = "Versión inicial.",
-                            UrlDocumento = "/docs/terminos-v1.0.html"
+                            UrlDocumento = "/docs/terminos-v1.0.pdf"
                         },
                         new
                         {
@@ -2608,7 +2611,7 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                             FechaVigencia = new DateTime(2026, 3, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             NumeroVersion = "1.0",
                             ResumenCambios = "Versión inicial.",
-                            UrlDocumento = "/docs/dpa-v1.0.html"
+                            UrlDocumento = "/docs/dpa-v1.0.pdf"
                         },
                         new
                         {
@@ -2621,7 +2624,7 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                             FechaVigencia = new DateTime(2026, 3, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             NumeroVersion = "1.0",
                             ResumenCambios = "Versión inicial.",
-                            UrlDocumento = "/docs/politica-privacidad-v1.0.html"
+                            UrlDocumento = "/docs/politica-privacidad-v1.0.pdf"
                         },
                         new
                         {
@@ -2634,7 +2637,7 @@ namespace Chetango.Infrastructure.Persistence.Migrations
                             FechaVigencia = new DateTime(2026, 3, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             NumeroVersion = "1.0",
                             ResumenCambios = "Versión inicial.",
-                            UrlDocumento = "/docs/aviso-privacidad-v1.0.html"
+                            UrlDocumento = "/docs/aviso-privacidad-v1.0.pdf"
                         });
                 });
 
