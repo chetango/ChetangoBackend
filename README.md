@@ -100,8 +100,7 @@ RESTful API built with Clean Architecture + CQRS, powering a complete management
 ```
 
 **Current Stats:**
-- 💰 Monthly Cost: ~$103,400 COP ($25 USD)
-- 👥 Capacity: 1 academy, 500+ users
+-  Capacity: 1 academy, 500+ users
 - 📈 Scalable to: 10-15 academies without upgrades
 - 🌍 Region: East US (60-80ms latency to Colombia)
 
@@ -807,8 +806,7 @@ Server=tcp:chetango-sql-prod.database.windows.net;Database=chetango-db-prod;
 
 **Current Configuration:**
 - 🌍 Region: East US
-- 💰 Monthly Cost: ~$103,400 COP (~$25 USD)
-- 👥 Current Load: 1 academy, 500+ users
+-  Current Load: 1 academy, 500+ users
 - 📈 Capacity: Can scale to 10-15 academies without upgrades
 
 ### CI/CD Pipeline (GitHub Actions)
