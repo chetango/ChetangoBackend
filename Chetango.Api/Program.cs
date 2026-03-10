@@ -24,7 +24,6 @@ using Chetango.Application.Clases.Queries.GetClaseById;
 using Chetango.Application.Clases.Queries.GetClases;
 using Chetango.Application.Clases.Queries.GetClasesDeProfesor;
 using Chetango.Application.Clases.Queries.GetTiposClase;
-using Chetango.Application.Clases.Commands.CrearTipoClase;
 using Chetango.Application.Clases.Queries.GetProfesores;
 using Chetango.Application.Clases.Queries.GetAlumnos;
 using Chetango.Application.Clases.DTOs;
@@ -96,12 +95,6 @@ using Chetango.Application.Admin.Commands.CreateTenantWithAdmin;
 using Chetango.Application.Admin.Commands.AssignUserToTenant;
 using Chetango.Application.Suscripciones.Queries;
 using Chetango.Application.Suscripciones.Commands;
-using Chetango.Application.Sedes.Queries;                    // Sedes dinámicas por tenant
-using Chetango.Application.Sedes.Commands.CreateSede;         // Crear sede
-using Chetango.Application.Sedes.Commands.UpdateSede;         // Actualizar sede
-using Chetango.Application.Sedes.Commands.DeleteSede;         // Desactivar sede
-using Chetango.Application.Compliance.Commands;               // Compliance/Onboarding legal
-using Chetango.Application.Compliance.Queries;
 using Chetango.Domain.Entities; // Added for Usuario
 using Chetango.Domain.Entities.Estados; // Added for TipoDocumento
 using Chetango.Application.Common; // registrar IAppDbContext
@@ -141,32 +134,15 @@ builder.Services.AddScoped<ITenantProvider, TenantProvider>(); // Scoped = por r
 builder.Services.AddScoped<ITenantService, TenantService>(); // Mantener para compatibilidad
 
 // CORS por entorno
-// Soporta:
-//   - Orígenes exactos definidos en appsettings (Cors:AllowedOrigins)
-//   - Todos los subdominios de *.aphellion.com (multi-tenant: nuevas academias)
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCors", policy =>
     {
-        policy
-            .SetIsOriginAllowed(origin =>
-            {
-                if (string.IsNullOrEmpty(origin)) return false;
-
-                // Permitir todos los subdominios de aphellion.com (multi-tenant)
-                if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
-                {
-                    if (uri.Host.EndsWith(".aphellion.com", StringComparison.OrdinalIgnoreCase))
-                        return true;
-                }
-
-                // Permitir orígenes explícitos del appsettings
-                return allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
-            })
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+        if (allowedOrigins.Length > 0)
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        else
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
 });
 
@@ -240,41 +216,15 @@ async Task ProvisionUsuarioAsync(TokenValidatedContext ctx)
                 logger.LogInformation("Roles desde token para {Email}: {Roles}", email ?? "unknown", string.Join(", ", roleList));
         }
 
-        // Verificar usuario en BD y resolver TenantId para multi-tenancy.
-        // Se usa IgnoreQueryFilters() intencionalmente: en este punto el TenantId aún no está
-        // resuelto (es justamente lo que este bloque hace), por lo que el query filter
-        // fail-secure bloquearía la búsqueda y crearía un ciclo sin salida.
+        // Verificar usuario en BD (solo para endpoints que requieren ownership)
         var db = sp.GetRequiredService<ChetangoDbContext>();
         var usuario = !string.IsNullOrWhiteSpace(email)
-            ? await db.Usuarios.AsNoTracking().IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Correo == email)
+            ? await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Correo == email)
             : null;
 
         if (usuario != null)
         {
             logger.LogInformation("Usuario encontrado en BD: {Email}", usuario.Correo);
-
-            // Resolver TenantId desde TenantUsers (necesario en desarrollo con localhost
-            // donde el middleware de subdomain no puede extraer el tenant del host)
-            var tenantProvider = sp.GetRequiredService<ITenantProvider>();
-            if (!tenantProvider.GetCurrentTenantId().HasValue)
-            {
-                var tenantUser = await db.TenantUsers
-                    .AsNoTracking()
-                    .Where(tu => tu.IdUsuario == usuario.IdUsuario && tu.Activo)
-                    .OrderByDescending(tu => tu.FechaAsignacion)
-                    .FirstOrDefaultAsync();
-
-                if (tenantUser != null)
-                {
-                    tenantProvider.SetTenantId(tenantUser.TenantId);
-                    logger.LogInformation("TenantId resuelto desde TenantUsers: {TenantId} para {Email}", 
-                        tenantUser.TenantId, email);
-                }
-                else
-                {
-                    logger.LogWarning("Usuario {Email} no tiene TenantUser activo asignado", email);
-                }
-            }
         }
         else if (!string.IsNullOrWhiteSpace(email))
         {
@@ -588,15 +538,6 @@ app.MapGet("/api/tipos-clase", async (IMediator mediator) =>
     var result = await mediator.Send(new GetTiposClaseQuery());
     return result.Succeeded ? Results.Ok(result.Value) : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("ApiScope");
-
-// POST /api/tipos-clase - Crear un nuevo tipo de clase (solo Admin)
-app.MapPost("/api/tipos-clase", async (CrearTipoClaseCommand command, IMediator mediator) =>
-{
-    var result = await mediator.Send(command);
-    return result.Succeeded
-        ? Results.Created("/api/tipos-clase", new { id = result.Value })
-        : Results.BadRequest(new { error = result.Error });
-}).RequireAuthorization("AdminOnly");
 
 // GET /api/tipos-paquete - Obtener todos los tipos de paquete disponibles
 app.MapGet("/api/tipos-paquete", async (IMediator mediator) =>
@@ -1858,47 +1799,6 @@ app.MapGet("/api/reportes/alumnos", async (
     var result = await mediator.Send(query);
     return result.Succeeded 
         ? Results.Ok(result.Value) 
-        : Results.BadRequest(new { error = result.Error });
-}).RequireAuthorization("AdminOnly");
-
-// GET /api/sedes - Sedes configuradas del tenant actual (AdminOnly)
-app.MapGet("/api/sedes", async (IMediator mediator) =>
-{
-    var result = await mediator.Send(new GetSedesQuery());
-
-    return result.Succeeded
-        ? Results.Ok(result.Value)
-        : Results.BadRequest(new { error = result.Error });
-}).RequireAuthorization("AdminOnly");
-
-// POST /api/sedes - Crear nueva sede (AdminOnly, sujeto a límite MaxSedes del plan)
-app.MapPost("/api/sedes", async (CreateSedeCommand command, IMediator mediator) =>
-{
-    var result = await mediator.Send(command);
-    return result.Succeeded
-        ? Results.Created("/api/sedes", result.Value)
-        : Results.BadRequest(new { error = result.Error });
-}).RequireAuthorization("AdminOnly");
-
-// PUT /api/sedes/{id} - Actualizar nombre/orden de una sede (AdminOnly)
-app.MapPut("/api/sedes/{id:guid}", async (Guid id, UpdateSedeCommand command, IMediator mediator) =>
-{
-    var commandToSend = command.Id == Guid.Empty || command.Id != id
-        ? command with { Id = id }
-        : command;
-
-    var result = await mediator.Send(commandToSend);
-    return result.Succeeded
-        ? Results.Ok(result.Value)
-        : Results.BadRequest(new { error = result.Error });
-}).RequireAuthorization("AdminOnly");
-
-// DELETE /api/sedes/{id} - Desactivar una sede (soft delete, AdminOnly)
-app.MapDelete("/api/sedes/{id:guid}", async (Guid id, IMediator mediator) =>
-{
-    var result = await mediator.Send(new DeleteSedeCommand(id));
-    return result.Succeeded
-        ? Results.Ok(new { eliminada = true })
         : Results.BadRequest(new { error = result.Error });
 }).RequireAuthorization("AdminOnly");
 
@@ -3339,31 +3239,6 @@ app.MapGet("/api/nomina/clases-profesor/{idProfesor:guid}", async (
 // === SUPER ADMIN - GESTIÓN DE TENANTS ===
 // ====================================================================================================
 
-// GET /api/super-admin/academias - Listar todas las academias
-app.MapGet("/api/super-admin/academias", async (IAppDbContext context) =>
-{
-    var academias = await context.Tenants
-        .OrderByDescending(t => t.FechaCreacion)
-        .Select(t => new
-        {
-            t.Id,
-            t.Nombre,
-            t.Subdomain,
-            t.Dominio,
-            t.Plan,
-            t.Estado,
-            t.FechaRegistro,
-            t.MaxSedes,
-            t.MaxAlumnos,
-            t.MaxProfesores,
-            t.MaxStorageMB,
-            t.EmailContacto
-        })
-        .ToListAsync();
-    
-    return Results.Ok(academias);
-}).RequireAuthorization("AdminOnly");
-
 // POST /api/super-admin/academias - Crear nueva academia con administrador (TODO EN UNO)
 app.MapPost("/api/super-admin/academias", async (
     CreateTenantWithAdminCommand command,
@@ -3579,94 +3454,4 @@ app.MapPost("/api/suscripciones/admin/rechazar/{pagoId}", async (
         return Results.BadRequest(new { success = false, message = result.Error });
 }).RequireAuthorization("AdminOnly"); // TODO: Cambiar a "SuperAdminOnly"
 
-// ====================================================================================================
-// === COMPLIANCE / ONBOARDING LEGAL ===
-// ====================================================================================================
-
-// GET /api/compliance/estado - Estado de cumplimiento del tenant actual (Admin)
-app.MapGet("/api/compliance/estado", async (
-    ITenantProvider tenantProvider,
-    IMediator mediator) =>
-{
-    var tenantId = tenantProvider.GetCurrentTenantId();
-    if (tenantId is null)
-        return Results.BadRequest(new { success = false, message = "No se pudo identificar el tenant." });
-
-    var result = await mediator.Send(new Chetango.Application.Compliance.Queries.GetEstadoCumplimientoQuery(tenantId.Value));
-    return result.Succeeded
-        ? Results.Ok(result.Value)
-        : Results.BadRequest(new { success = false, message = result.Error });
-}).RequireAuthorization("ApiScope"); // Admin y profesor pueden consultar (el guard de onboarding lo necesita)
-
-// POST /api/compliance/aceptar - Aceptar uno o más documentos legales (Admin)
-app.MapPost("/api/compliance/aceptar", async (
-    ITenantProvider tenantProvider,
-    HttpContext httpContext,
-    ChetangoDbContext db,
-    IMediator mediator) =>
-{
-    var tenantId = tenantProvider.GetCurrentTenantId();
-    if (tenantId is null)
-        return Results.BadRequest(new { success = false, message = "No se pudo identificar el tenant." });
-
-    // Extraer email del token para obtener el idUsuario
-    var email = httpContext.User.FindFirst(ClaimTypes.Email)?.Value
-             ?? httpContext.User.FindFirst("preferred_username")?.Value
-             ?? httpContext.User.FindFirst("emails")?.Value;
-    email = string.IsNullOrWhiteSpace(email) ? email : email?.Trim();
-
-    if (string.IsNullOrWhiteSpace(email))
-        return Results.Unauthorized();
-
-    var usuario = await db.Usuarios
-        .AsNoTracking()
-        .FirstOrDefaultAsync(u => u.Correo == email);
-
-    if (usuario is null)
-        return Results.NotFound(new { success = false, message = "Usuario no encontrado." });
-
-    var body = await httpContext.Request.ReadFromJsonAsync<AceptarDocumentosRequest>();
-    if (body is null || body.VersionesDocumentoLegalIds is null || body.VersionesDocumentoLegalIds.Count == 0)
-        return Results.BadRequest(new { success = false, message = "Debe indicar las versiones de documentos a aceptar." });
-
-    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
-    var userAgent = httpContext.Request.Headers.UserAgent.ToString();
-
-    var command = new Chetango.Application.Compliance.Commands.AceptarDocumentosCommand(
-        TenantId: tenantId.Value,
-        IdUsuario: usuario.IdUsuario,
-        VersionesDocumentoLegalIds: body.VersionesDocumentoLegalIds,
-        IpOrigen: ip,
-        UserAgent: userAgent,
-        Contexto: body.Contexto ?? "Onboarding");
-
-    var result = await mediator.Send(command);
-    return result.Succeeded
-        ? Results.Ok(result.Value)
-        : Results.BadRequest(new { success = false, message = result.Error });
-}).RequireAuthorization("AdminOnly");
-
-// GET /api/compliance/historial - Historial de aceptaciones del tenant (Admin)
-app.MapGet("/api/compliance/historial", async (
-    ITenantProvider tenantProvider,
-    IMediator mediator) =>
-{
-    var tenantId = tenantProvider.GetCurrentTenantId();
-    if (tenantId is null)
-        return Results.BadRequest(new { success = false, message = "No se pudo identificar el tenant." });
-
-    var result = await mediator.Send(new Chetango.Application.Compliance.Queries.GetHistorialAceptacionesQuery(tenantId.Value));
-    return result.Succeeded
-        ? Results.Ok(result.Value)
-        : Results.BadRequest(new { success = false, message = result.Error });
-}).RequireAuthorization("AdminOnly");
-
 app.Run();
-
-// ============================================================
-// Request DTOs for Compliance endpoints
-// ============================================================
-public record AceptarDocumentosRequest(
-    List<Guid> VersionesDocumentoLegalIds,
-    string? Contexto
-);
