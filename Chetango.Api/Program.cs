@@ -2,6 +2,7 @@
 // Author: Jorge Padilla
 // Company: Corporación Chetango
 // Description: Main application entry point with Clean Architecture + CQRS
+// Verified: Mac setup 2026-03-23
 
 using Microsoft.EntityFrameworkCore;
 using Chetango.Infrastructure.Persistence;
